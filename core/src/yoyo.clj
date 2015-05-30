@@ -48,7 +48,8 @@
 
 (defn start! []
   (if-not @!latch
-    (tn/refresh :after 'yoyo/do-start!)
+    (binding [*ns* *ns*] ; *ns* seems to have to be thread-bound for refresh to work
+      (tn/refresh :after 'yoyo/do-start!))
 
     (throw (ex-info "System already started!" {}))))
 
