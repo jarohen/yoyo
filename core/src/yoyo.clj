@@ -13,16 +13,29 @@
 
 (defn run-system! [f]
   (let [latch-promise (promise)
+        started-promise (promise)
         latch (fn []
                 (log/info "Started system.")
+                (deliver started-promise ::success)
+
                 (deref latch-promise)
+
                 (log/info "Stopping system..."))]
     (future
       (log/info "Starting system...")
-      (f latch)
-      (log/info "Stopped system."))
 
-    latch-promise))
+      (try
+        (f latch)
+        (catch Throwable e
+          (deliver started-promise e))
+
+        (finally
+          (log/info "Stopped system."))))
+
+    (let [started-result @started-promise]
+      (if (= ::success started-result)
+        latch-promise
+        (throw started-result)))))
 
 (defn- do-start! []
   (if-let [system-fn @!system-fn]
