@@ -1,0 +1,6 @@
+* Changelog
+** 0.0.x
+*** 0.0.4
+Adding max-total and max-idle configuration parameters
+*** 0.0.3
+Initial release

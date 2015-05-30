@@ -1,0 +1,28 @@
+* JDBC Pool - Yoyo module
+
+This is a module to start a JDBC connection pool in a Yoyo
+system, based on [[http://commons.apache.org/proper/commons-dbcp/][Apache Commons DBCP2]].
+
+** Getting started
+
+Add this in your 'project.clj', as a dependency:
+
+#+BEGIN_SRC clojure
+  [jarohen/yoyo.jdbc-pool "0.0.1"]
+#+END_SRC
+
+#+BEGIN_SRC clojure
+  {:driver "org.postgresql.Driver" ; optional - we'll guess it if you don't specify one!
+   :subprotocol "postgresql"
+   :host "..."
+   :port 5432
+   :username "..."
+   :password "..."
+   :db "..."
+   :max-total 8
+   :max-idle 8}
+#+END_SRC
+
+This module is currently very basic and so only accepts the options
+above - if you want to supply other options to the connection pool,
+PRs are very gratefully received!
