@@ -1,6 +1,6 @@
-* JDBC Pool - Yoyo module
+* JDBC Pool - Yo-yo module
 
-This is a module to start a JDBC connection pool in a Yoyo
+This is a module to start a JDBC connection pool in a Yo-yo
 system, based on [[http://commons.apache.org/proper/commons-dbcp/][Apache Commons DBCP2]].
 
 ** Getting started

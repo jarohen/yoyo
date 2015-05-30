@@ -1,5 +1,5 @@
 (defproject jarohen/yoyo.jdbc-pool "0.0.1"
-  :description "A module to set up a JDBC connection pool in Yoyo"
+  :description "A module to set up a JDBC connection pool in Yo-yo"
   :url "https://github.com/james-henderson/yoyo"
 
   :license {:name "Eclipse Public License"

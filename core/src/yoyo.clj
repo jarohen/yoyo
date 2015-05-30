@@ -44,7 +44,7 @@
       (reset! !latch (run-system! (resolve system-fn)))
       true)
 
-    (throw (ex-info "Please set a Yoyo system-fn!" {}))))
+    (throw (ex-info "Please set a Yo-yo system-fn!" {}))))
 
 (defn start! []
   (if-not @!latch
