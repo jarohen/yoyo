@@ -39,6 +39,7 @@
                             (dom/p nil "Start making your webapp!")
                             (dom/ul nil
                                     (dom/li nil (dom/p nil "The CLJS entry point is in " (code "ui-src/{{sanitized}}/ui/app.cljs")))
+                                    (dom/li nil (dom/p nil "The Clojure system entry point is in " (code "src/{{sanitized}}/service/system.clj")))
                                     (dom/li nil (dom/p nil "The Clojure Ring handler is in " (code "src/{{sanitized}}/service/handler.clj")))))
 
                     (dom/li nil (dom/p nil "Any trouble, let me know - either through GitHub or on Twitter at " (dom/a #js {:href "https://twitter.com/jarohen"} "@jarohen")))

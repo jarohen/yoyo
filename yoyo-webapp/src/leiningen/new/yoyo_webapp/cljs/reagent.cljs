@@ -34,6 +34,7 @@
     [:li [:p "Start making your webapp!"]
      [:ul
       [:li [:p "The CLJS entry point is in " [code "ui-src/{{sanitized}}/ui/app.cljs"]]]
+      [:li [:p "The Clojure system entry point is in " [code "src/{{sanitized}}/service/system.clj"]]]
       [:li [:p "The Clojure Ring handler is in " [code "src/{{sanitized}}/service/handler.clj"]]]]]
 
     [:li [:p "Any trouble, let me know - either through GitHub or on Twitter at " [:a {:href "https://twitter.com/jarohen"} "@jarohen"]]]
