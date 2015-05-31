@@ -22,9 +22,5 @@
 
   :exclusions [org.clojure/clojure]
 
-  :main {{name}}.service.main
-
-  :profiles {:uberjar {:aot [{{name}}.service.main]}}
-
-  :aliases {"dev" ["with-profile" "+dev" "run"]
+  :aliases {"dev" ["run" "-m" "{{name}}.service.main"]
             "build" "uberjar"})

@@ -32,9 +32,9 @@
                ["resources/log4j2.json" (render "resources/log4j2.json" data)]
 
                ["src/{{sanitized}}/service/main.clj" (render "clj/main.clj" data)]
-               ["src/{{sanitized}}/service/system.clj" (render "clj/system.clj" data)]
 
                ["src/{{sanitized}}/service/handler.clj" (render "clj/handler.clj" data)]
+               ["src/{{sanitized}}/service/cljs.clj" (render "clj/cljs.clj" data)]
                ["src/{{sanitized}}/service/css.clj" (render "clj/css.clj" data)]
 
                ["ui-src/{{sanitized}}/ui/app.cljs" (render (format "cljs/%s.cljs" (name-to-path (name frontend-library))) data)]))

@@ -18,8 +18,6 @@
              ["resources/log4j2.json" (render "resources/log4j2.json" data)]
 
              ["src/{{sanitized}}/service/main.clj" (render "clj/main.clj" data)]
-             ["src/{{sanitized}}/service/system.clj" (render "clj/system.clj" data)]
-
              ["src/{{sanitized}}/service/handler.clj" (render "clj/handler.clj" data)]))
 
   (println "Created!")

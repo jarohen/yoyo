@@ -11,9 +11,9 @@
 
                  [jarohen/yoyo "0.1.0-SNAPSHOT"]
 
-                 [ring/ring-core "1.3.0"]
+                 [ring/ring-core "1.3.2"]
                  [jarohen/yoyo.aleph "0.1.0-SNAPSHOT"]
-                 [bidi "1.15.0"]
+                 [bidi "1.19.0"]
                  [hiccup "1.0.5"]
                  [garden "1.2.1"]
                  [ring-middleware-format "0.5.0" :exclusions [ring]]
@@ -28,18 +28,16 @@
   :exclusions [org.clojure/clojure
                org.clojure/clojurescript]
 
-  :main {{name}}.service.main
-
-  :profiles {:uberjar {:aot [{{name}}.service.main]}
-             :dev {:dependencies [[org.clojure/clojurescript "0.0-3269"]
-                                  [reagent "0.5.0"]]}}
+  :profiles {:dev {:dependencies [[org.clojure/clojurescript "0.0-3269"]
+                                  {{#flow?}}[jarohen/flow "0.3.0-alpha3"]{{/flow?}}{{#om?}}[org.omcljs/om "0.8.8"]{{#sablono?}}
+                                  [sablono "0.3.4"]{{/sablono?}}{{/om?}}{{#reagent?}}[reagent "0.5.0"]{{/reagent?}}]}}
 
   :auto-clean false
 
   :filespecs [{:type :path, :path "target/cljs/build/mains"}]
 
-  :aliases {"dev" ["with-profile" "+dev" "run"]
+  :aliases {"dev" ["with-profile" "+dev" "run" "-m" "{{name}}.service.main"]
             "build" ["do"
                      "clean"
-                     ["with-profile" "+dev" "run" "-m" "{{name}}.service.system/build!"]
+                     ["with-profile" "+dev" "run" "-m" "{{name}}.service.main/build!"]
                      "uberjar"]})
