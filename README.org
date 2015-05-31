@@ -49,6 +49,9 @@ discussions.
 
 ** Getting Started - your first Yo-yo system
 
+(There are a couple of Lein templates - 'yoyo-webapp' and 'yoyo-api',
+but here follows a fuller explanation!)
+
 I'm presuming you've added the Yo-yo dependency. It's at the top. Go
 have a look and copy it into your project.clj/build.boot - I'll
 wait :)
