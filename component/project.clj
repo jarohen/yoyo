@@ -1,4 +1,4 @@
-(defproject jarohen/yoyo.component "0.1.0-SNAPSHOT"
+(defproject jarohen/yoyo.component "0.0.1"
   :description "FIXME: write description"
   :url "https://github.com/james-henderson/yoyo"
 
