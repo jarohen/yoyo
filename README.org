@@ -265,5 +265,6 @@ James
 
 Copyright © 2015 James Henderson
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Yo-yo, and all modules within this repo, are distributed under the
+Eclipse Public License - either version 1.0 or (at your option) any
+later version.
