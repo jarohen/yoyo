@@ -36,8 +36,8 @@
 
   :filespecs [{:type :path, :path "target/cljs/build/mains"}]
 
-  :aliases {"dev" ["with-profile" "+dev" "run" "-m" "{{name}}.service.main"]
+  :aliases {"dev" ["run" "-m" "{{name}}.service.main"]
             "build" ["do"
                      "clean"
-                     ["with-profile" "+dev" "run" "-m" "{{name}}.service.main/build!"]
+                     ["run" "-m" "{{name}}.service.main/build!"]
                      "uberjar"]})
