@@ -1,0 +1,235 @@
+* Yo-yo
+
+Yo-yo is a lightweight library for starting, reloading (via
+clojure.tools.namespace) and stopping Clojure systems in a functional
+style.
+
+** Dependency:
+
+#+BEGIN_SRC clojure
+  [jarohen/yoyo "0.0.1"]
+#+END_SRC
+
+** Rationale
+
+Yo-yo came into existence after a few threads of conversation on the
+Clojure mailing list, Twitter, and in real life (I know!). It seemed
+that a number of people whose opinions I respect highly weren't quite
+sold on Component and its derivatives (openly, including Phoenix) - a
+few even said that Phoenix reminded them of Spring.
+
+This obviously won't do!
+
+So we did what Clojurians do: going to look at other languages to see
+what they do, and pinching the best ideas; mostly Haskell, but a
+couple of others as well - and Yo-yo is the result of those
+discussions.
+
+*** What Yo-yo is:
+
+- A lightweight library (currently 66 LoC!) for starting, reloading
+  and stopping Clojure systems in a functional style.
+- That's it!
+
+*** What Yo-yo isn't:
+
+- A configuration library
+- A dependency injection library
+- A Leiningen/Boot plugin
+- A source of painful Java/OO/Spring memories ;)
+- ...
+
+*** What Yo-yo (core) isn't, but is also provided in this repo
+
+- A module for starting/stopping an Aleph web server
+- A module for compiling/building CLJS
+- A module for starting/stopping JDBC connection pools
+- A module for integrating [[https://github.com/stuartsierra/component][Component]] components/systems
+- Templates for creating webapps and REST APIs
+
+** Getting Started - your first Yo-yo system
+
+I'm presuming you've added the Yo-yo dependency. It's at the top. Go
+have a look and copy it into your project.clj/build.boot - I'll
+wait :)
+
+Before we =require= in Yo-yo, let's think about a toy database
+connection pool - a resource that needs to be started and
+stopped. Let's also assume we have a function that takes a started
+connection pool, and returns when the system needs to be stopped
+(we'll pass this in as =f=). What does this function look like?
+
+#+BEGIN_SRC clojure
+  (defn with-db-pool [db-config f]
+    (let [db-pool (start-pool! db-config)]
+      (try
+        (f db-pool)
+
+        (finally
+          (stop-pool! db-pool)))))
+#+END_SRC
+
+I'm cheating slightly here, assuming something else actually does the
+starting and stopping, but we only care about the lifecycle here,
+right?!
+
+These actually compose pretty well - they're just functions! Let's
+start a web server, using a Ring handler that depends on the DB pool:
+
+#+BEGIN_SRC clojure
+  ;; first - a couple of helper functions...
+
+  (defn with-web-server [{:keys [handler port]} f]
+    ;; left as an exercise to the reader - it's pretty similar to the
+    ;; one above!
+    )
+
+  (defn make-handler [{:keys [db-pool]}]
+    (routes
+      (GET "/" []
+        ;; you've all seen this before too...
+
+        ;; note that you have access to the db-pool here :)
+        )))
+
+  ;; now let's wire it up:
+
+  (with-db-pool {...}
+    (fn [db-pool]
+      (with-web-server {:handler (make-handler {:db-pool db-pool})
+                        :port ...}
+        (fn [web-server]
+          ;; TODO: Ah. We've run out of turtles.
+          ;;       What goes in here?!!
+          ))))
+#+END_SRC
+
+What goes in the middle there? Until that point, it's turtles all the
+way down, but at some point we actually need a function that waits for
+some signal to 'stop the system'!
+
+*** The full story:
+
+That's where Yo-yo comes in - there's a function called =run-system!=,
+which you can call as follows:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo])
+
+  (yoyo/run-system!
+   (fn [latch]
+     (with-db-pool {...}
+       (fn [db-pool]
+         (with-web-server {:handler (make-handler {:db-pool db-pool})
+                           :port ...}
+           (fn [web-server]
+             (latch))))))) ; Aha!
+#+END_SRC
+
+What's happening here?
+
+- When the system starts (when your code calls =(latch)=),
+  =run-system!= returns a promise.
+- =deliver= any value to that promise, =(latch)= will return, and your
+  system will stop.
+
+*** The version you'll probably use, 99% of the time:
+
+You'll probably not want to run this system just once, so there are a
+number of lifecycle functions included for easy starting, stopping and
+reloading:
+
+- =(yoyo/set-system-fn! 'system-fn-sym)= - stores a symbol pointing to
+  a system function (a function accepting a latch, like the one above)
+  for use with the functions below.
+- =(yoyo/start!)= - starts a system by calling the stored =system-fn=.
+- =(yoyo/stop!)= - stops the currently started system
+- =(yoyo/reload!)= - stops a system (if one's running), reloads all
+  your code (through clojure.tools.namespace), and starts it up again.
+
+In practice, this looks like:
+
+#+BEGIN_SRC clojure
+  (ns myapp.main
+    (:require [yoyo]
+              ...))
+
+  (defn make-system [latch]
+    (with-db-pool {...}
+      (fn [db-pool]
+        (with-web-server {:handler (make-handler {:db-pool db-pool})
+                          :port ...}
+          (fn [web-server]
+            (latch))))))
+
+  (defn -main [& args]
+    (yoyo/set-system-fn! 'myapp.main/make-system)
+
+    (yoyo/start!))
+#+END_SRC
+
+In the REPL, later, you can call =(yoyo/stop!)= and =(yoyo/reload!)=
+to your heart's content :)
+
+Why pass a symbol to =set-system-fn!=? So that you can make a change
+to =make-system= (or anywhere else in your codebase, for that matter)
+and have that change picked up on reload, without needing to run
+=-main= again!
+
+*** That's all folks!
+
+That's all there is to Yo-yo core!
+
+** Provided modules
+
+There are a number of modules for common use-cases - web servers,
+connection pools, CLJS compilers, etc - each with their own
+documentation. Have a browse through the repo!
+
+If you do create your own, feel free to either start your own repo or
+submit a PR to this repo. For the sake of consistency, I'd probably
+recommend an artifact named =[<your-group>/yoyo.<your-module>]=.
+
+** Integrating with Component
+
+
+
+** Templates
+
+There are a couple of Leiningen templates that'll get you up and
+running quickly - =yoyo-webapp= and =yoyo-api=. Run (e.g.) =lein new
+yoyo-app your-app-name= to get started!
+
+** Feedback/thoughts
+
+Yes please! Yo-yo's still in its infancy, so I'd be particularly
+interested to hear what you think - are we on the right lines here?
+
+I can be contacted via Twitter, Github, e-mail (on my profile), Slack,
+Gitter, you name it!
+
+** Bug reports/PRs
+
+Yes please to these too! Please submit through Github in the
+traditional manner.
+
+** Thanks!
+
+A big thanks, in particular, to Kris Jenkins - who's provided a lot of
+time, thoughts, advice and inspiration for the ideas behind
+and around Yo-yo. Cheers Kris!
+
+Thanks also to those involved in discussions about Component which
+helped to shape Yo-yo, including (but not limited to) Daniel Neal,
+Martin Trojer, Yodit Stanton and Neale Swinnerton.
+
+Cheers!
+
+James
+
+** LICENCE
+
+Copyright © 2015 James Henderson
+
+Distributed under the Eclipse Public License either version 1.0 or (at
+your option) any later version.
