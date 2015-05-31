@@ -11,14 +11,14 @@
   (path-for-js [_])
   (path-for-module [_ module]))
 
-(defmacro assert-cljs [& body]
-  (if (try
-        (require '[cljs.closure :as cljs]
-                 '[cljs.env :as cljs-env])
-        true
+(try
+  (require '[cljs.closure :as cljs]
+           '[cljs.env :as cljs-env])
 
-        (catch Exception e
-          false))
+  (catch Exception e))
+
+(defmacro assert-cljs [& body]
+  (if (find-ns 'cljs.closure)
     `(do ~@body)
     `(throw (Exception. "No CLJS dependency available."))))
 
