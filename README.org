@@ -58,9 +58,9 @@ wait :)
 
 Before we =require= in Yo-yo, let's think about a toy database
 connection pool - a resource that needs to be started and
-stopped. Let's also assume we have a function that takes a started
+stopped. Let's also assume we're given a function that takes a started
 connection pool, and returns when the system needs to be stopped
-(we'll pass this in as =f=). What does this function look like?
+(we'll pass this in as =f=). What does this DB pool look like?
 
 #+BEGIN_SRC clojure
   (defn with-db-pool [db-config f]
