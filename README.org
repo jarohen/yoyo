@@ -192,7 +192,38 @@ recommend an artifact named =[<your-group>/yoyo.<your-module>]=.
 
 ** Integrating with Component
 
+Components/Component systems can be seamlessly be brought into a Yo-yo
+system using the 'component' module in this repo.
 
+For an individual Component:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.component :as yc])
+
+  (yc/with-component (map->MyComponent {...})
+    (fn [started-component]
+      ;; next turtle
+      ))
+#+END_SRC
+
+The component will be started before being passed to this function,
+and stopped afterwards.
+
+For a whole system:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.component :as yc]
+            [com.stuartsierra.component :as c])
+
+  (yc/with-component-system (c/system-map
+                              ...)
+    (fn [started-system]
+      ;; next turtle
+      ))
+#+END_SRC
+
+Likewise, the system will be started before being passed to that
+function, and stopped afterwards.
 
 ** Templates
 
