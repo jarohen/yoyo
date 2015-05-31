@@ -1,0 +1,42 @@
+* Component - Yo-yo module
+
+A small Yo-yo module to embed Components/Component systems into a
+Yo-yo system.
+
+** Dependency
+
+#+BEGIN_SRC clojure
+  [jarohen/yoyo.component "0.0.1"]
+#+END_SRC
+
+** Usage
+
+For an individual Component:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.component :as yc])
+
+  (yc/with-component (map->MyComponent {...})
+    (fn [started-component]
+      ;; next turtle
+      ))
+#+END_SRC
+
+The component will be started before being passed to this function,
+and stopped afterwards.
+
+For a whole system:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.component :as yc]
+            [com.stuartsierra.component :as c])
+
+  (yc/with-component-system (c/system-map
+                              ...)
+    (fn [started-system]
+      ;; next turtle
+      ))
+#+END_SRC
+
+Likewise, the system will be started before being passed to that
+function, and stopped afterwards.
