@@ -74,3 +74,86 @@
   ([{:keys [refresh-all?] :as opts}]
    (stop!)
    (start! opts)))
+
+(defmacro ylet [bindings & body]
+  (assert (even? (count bindings)) "'ylet' must have an even number of bindings")
+
+  (if-let [[bind expr & more] (seq bindings)]
+    (if (= bind :let)
+      `(let ~expr
+         (ylet ~more ~@body))
+
+      `(~@expr (fn [~bind]
+                 (ylet ~more ~@body))))
+    `(do
+       ~@body)))
+
+(defmacro defsystem [name bindings & body]
+  `(defn ~name [latch#]
+     (ylet ~bindings
+       ~@body)))
+
+(comment
+
+  ;; Option 1 - the 'fn staircase' (current)
+
+  (defn make-system [latch]
+    (with-db-pool {...}
+      (fn [db-pool]
+        (let [web-config (read-config ...)]
+          (with-cljs-compiler {:config web-config
+                               ...}
+            (fn [cljs-compiler]
+              (with-web-server {:handler (make-handler {:cljs-compiler cljs-compiler
+                                                        :db-pool db-pool
+                                                        :config web-config})
+                                :port ...}
+                (fn [server]
+                  (latch)))))))))
+
+  ;; ---
+
+  ;; Option 2 - a 'let' macro (essentially Haskell's 'do' syntax sugar
+  ;; over a continuation-like monad - assuming the last argument to a
+  ;; 'with-' function is the continuation)
+
+  (:require [yoyo :refer [ylet]])
+
+  (defn make-system [latch]
+    (ylet [db-pool (with-db-pool {...})
+
+           :let [web-config (read-config ...)]
+
+           cljs-compiler (with-cljs-compiler {:config web-config
+                                              ...})
+
+           server (with-web-server {:handler (make-handler {:cljs-compiler cljs-compiler
+                                                            :db-pool db-pool
+                                                            :config web-config})
+                                    :port ...})]
+      (latch)))
+
+  ;; ---
+
+  ;; Option 3 - going slightly further - removing the latch and naming the system
+
+  (:require [yoyo :refer [defsystem]])
+
+  (defsystem my-system
+    [db-pool (with-db-pool {...})
+
+     :let [web-config (read-config ...)]
+
+     cljs-compiler (with-cljs-compiler {:config web-config
+                                        ...})
+
+     server (with-web-server {:handler (make-handler {:cljs-compiler cljs-compiler
+                                                      :db-pool db-pool
+                                                      :config web-config})
+                              :port ...})])
+
+  ;; ---
+
+  ;; We can, of course, offer all three!
+
+  )
