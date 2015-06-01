@@ -13,6 +13,8 @@ style.
   [jarohen/yoyo "0.0.1"]
 #+END_SRC
 
+There will likely be many breaking changes until 0.1.0!
+
 ** Rationale
 
 Yo-yo came into existence after a few threads of conversation on the
