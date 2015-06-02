@@ -9,16 +9,16 @@
                  [org.clojure/tools.reader "0.9.2"]
                  [jarohen/embed-nrepl "0.1.0"]
 
-                 [jarohen/yoyo "0.1.0-SNAPSHOT"]
+                 [jarohen/yoyo "0.0.1"]
 
                  [ring/ring-core "1.3.2"]
-                 [jarohen/yoyo.aleph "0.1.0-SNAPSHOT"]
+                 [jarohen/yoyo.aleph "0.0.1"]
                  [bidi "1.19.0"]
                  [hiccup "1.0.5"]
                  [garden "1.2.1"]
                  [ring-middleware-format "0.5.0" :exclusions [ring]]
 
-                 [jarohen/yoyo.cljs "0.1.0-SNAPSHOT"]
+                 [jarohen/yoyo.cljs "0.0.1"]
 
                  [org.clojure/tools.logging "0.3.1"]
                  [org.slf4j/slf4j-api "1.7.9"]
