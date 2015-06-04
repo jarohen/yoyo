@@ -21,9 +21,9 @@
   (defn make-system [latch]
     (...
      (fn [...]
-       (with-web-server {:handler (make-handler ...)
-                         :port ...
-                         :aleph-opts {}} ; anything else you'd pass to aleph.http/start-server
+       (aleph/with-web-server {:handler (make-handler ...)
+                               :port ...
+                               :aleph-opts {}} ; anything else you'd pass to aleph.http/start-server
          (fn [server]
            ...)))))
 #+END_SRC
