@@ -6,7 +6,7 @@ system, based on [[http://commons.apache.org/proper/commons-dbcp/][Apache Common
 ** Dependency
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo.jdbc-pool "0.0.1"]
+  [jarohen/yoyo.jdbc-pool "0.0.2"]
 #+END_SRC
 
 ** Usage

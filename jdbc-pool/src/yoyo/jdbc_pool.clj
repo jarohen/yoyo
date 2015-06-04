@@ -25,4 +25,4 @@
       (f pool)
 
       (finally
-        (.close pool)))))
+        (.close (:datasource pool))))))
