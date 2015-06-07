@@ -48,7 +48,8 @@
 
 (defn start! []
   (if-not @!latch
-    (binding [*ns* *ns*] ; *ns* seems to have to be thread-bound for refresh to work
+    (binding [*ns* *ns* ; *ns* seems to have to be thread-bound for refresh to work
+              clojure.test/*load-tests* false]
       (tn/refresh :after 'yoyo/do-start!))
 
     (throw (ex-info "System already started!" {}))))
