@@ -1,4 +1,4 @@
-(defproject jarohen/yoyo "0.0.1"
+(defproject jarohen/yoyo "0.0.2-SNAPSHOT"
   :description ""
   :url "https://github.com/james-henderson/yoyo"
   :license {:name "Eclipse Public License"
