@@ -1,5 +1,10 @@
 * Changelog
 ** 0.0.x
+*** 0.0.2
+
+Breaking change - the function passed to with-webserver should now
+take 1 argument (for future compatibility with ylet)
+
 *** 0.0.1
 
 Initial release

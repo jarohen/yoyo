@@ -3,7 +3,7 @@
 ** Dependency
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo.http-kit "0.0.1"]
+  [jarohen/yoyo.http-kit "0.0.2"]
 #+END_SRC
 
 ** Usage
@@ -24,6 +24,6 @@
        (http/with-web-server {:handler (make-handler ...)
                               :port ...
                               :httpkit-opts {}} ; anything else you'd pass to org.httpkit.server/run-server
-         (fn []
+         (fn [server]
            ...)))))
 #+END_SRC

@@ -1,4 +1,4 @@
-(defproject jarohen/yoyo.http-kit "0.0.1"
+(defproject jarohen/yoyo.http-kit "0.0.2"
   :description "FIXME: write description"
   :url "https://github.com/james-henderson/yoyo"
 

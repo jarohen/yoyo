@@ -12,7 +12,7 @@
                                              httpkit-opts))]
     (log/info "Started web server.")
     (try
-      (f)
+      (f this)
       (finally
         (log/info "Stopping web server...")
         (stop-server!)
