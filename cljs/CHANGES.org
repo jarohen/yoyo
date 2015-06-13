@@ -1,5 +1,9 @@
 * Changelog
 ** 0.0.x
+*** 0.0.3
+
+Bugfix - minor change to clojure.tools.logging wrapper
+
 *** 0.0.2
 
 Breaking change - now expects ={:source-paths #{"ui-src"}}= rather than

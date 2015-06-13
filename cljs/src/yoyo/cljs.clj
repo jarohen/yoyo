@@ -57,7 +57,7 @@
      (log/infof "Compiling CLJS, from %s to '%s'..." source-paths target-path)
 
      (try
-       (log/with-logs ['cljs.closure]
+       (log/with-logs ['cljs.closure :debug :warn]
          (cljs/build cljs-compilable cljs-opts cljs-compiler-env))
 
        (log/infof "Compiled CLJS, from %s to '%s', in %.2fs."

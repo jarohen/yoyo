@@ -7,7 +7,7 @@ Modular [[https://github.com/juxt/modular/tree/master/modules/cljs/][CLJS module
 ** Dependency
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo.cljs "0.0.2"]
+  [jarohen/yoyo.cljs "0.0.3"]
 #+END_SRC
 
 ** Usage
