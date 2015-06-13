@@ -26,11 +26,19 @@
                         (visitFileFailed [_ file exc]
                           FileVisitResult/CONTINUE))))
 
-(defn watch-files! [^File source-path]
-  (let [path (Paths/get (.toURI source-path))
-        fs (.getFileSystem path)
-        watch-service (doto (.newWatchService fs)
-                        (register-watches! path))
+(defn watch-files! [source-paths]
+  (let [file-systems (->> (for [source-path source-paths]
+                            (let [path (Paths/get (.toURI (io/file source-path)))]
+                              {(.getFileSystem path) [path]}))
+
+                          (apply merge-with concat))
+
+        watch-services (for [[file-system paths] file-systems]
+                         (reduce (fn [watch-service path]
+                                   (doto watch-service
+                                     (register-watches! path)))
+                                 (.newWatchService file-system)
+                                 paths))
 
         thread-ch (a/chan)
         out-ch (a/chan)
@@ -38,28 +46,32 @@
 
     (go
       (a/<! latch-ch)
-      (.close watch-service)
+      (doseq [watch-service watch-services]
+        (.close watch-service))
       (a/close! out-ch))
 
-    (a/thread
-      (loop []
-        (when-let [watch-key (try
-                               (.take watch-service)
-                               (catch ClosedWatchServiceException e
-                                 ;; we've been told to stop.
-                                 ))]
+    (doseq [watch-service watch-services]
+      (a/thread
+        (loop []
+          (when-let [watch-key (try
+                                 (.take watch-service)
+                                 (catch ClosedWatchServiceException e
+                                   ;; we've been told to stop.
+                                   ))]
 
-          (when (some (fn [^WatchEvent e]
-                        (let [fstr (.. e context toString)]
-                          (and (or (. fstr (endsWith "cljs"))
-                                   (. fstr (endsWith "js")))
-                               (not (. fstr (startsWith ".#"))))))
-                      (seq (.pollEvents watch-key)))
+            (when (some (fn [^WatchEvent e]
+                          (let [fstr (.. e context toString)]
+                            (and (or (. fstr (endsWith "cljs"))
+                                     (. fstr (endsWith "cljc"))
+                                     (. fstr (endsWith "clj"))
+                                     (. fstr (endsWith "js")))
+                                 (not (. fstr (startsWith ".#"))))))
+                        (seq (.pollEvents watch-key)))
 
-            (a/>!! out-ch :alert))
+              (a/>!! out-ch :alert))
 
-          (when (.reset watch-key)
-            (recur)))))
+            (when (.reset watch-key)
+              (recur))))))
 
     {:out-ch out-ch
      :latch-ch latch-ch}))

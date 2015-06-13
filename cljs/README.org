@@ -7,7 +7,7 @@ Modular [[https://github.com/juxt/modular/tree/master/modules/cljs/][CLJS module
 ** Dependency
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo.cljs "0.0.1"]
+  [jarohen/yoyo.cljs "0.0.2"]
 #+END_SRC
 
 ** Usage
@@ -17,7 +17,7 @@ In your system:
 #+BEGIN_SRC clojure
   (:require [yoyo.cljs :refer [with-cljs-compiler]])
 
-  (with-cljs-compiler {:source-path "ui-src"
+  (with-cljs-compiler {:source-paths #{"ui-src"}
                        :target-path "target/cljs/"
 
                        :web-context-path "/js"

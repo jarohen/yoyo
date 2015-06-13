@@ -45,20 +45,29 @@
                                                                                      (str (name module-key) ".js"))))])
                                        (into {}))))))))
 
-(defn- compile-cljs! [{:keys [source-path target-path] :as cljs-opts} cljs-compiler-env]
+(defn- compile-cljs! [{:keys [source-paths target-path] :as cljs-opts} cljs-compiler-env]
   (assert-cljs
-   (let [start-time (System/nanoTime)]
-     (log/infof "Compiling CLJS, from '%s' to '%s'..." source-path target-path)
+   (assert (not-empty source-paths) "Please provide some source-paths!")
+
+   (let [start-time (System/nanoTime)
+         cljs-compilable (reify cljs/Compilable
+                           (-compile [_ opts]
+                             (mapcat #(cljs/-compile % opts) source-paths)))]
+
+     (log/infof "Compiling CLJS, from %s to '%s'..." source-paths target-path)
+
      (try
-       (cljs/build source-path cljs-opts cljs-compiler-env)
-       (log/infof "Compiled CLJS, from '%s' to '%s', in %.2fs."
-                  source-path
+       (log/with-logs ['cljs.closure]
+         (cljs/build cljs-compilable cljs-opts cljs-compiler-env))
+
+       (log/infof "Compiled CLJS, from %s to '%s', in %.2fs."
+                  source-paths
                   target-path
                   (/ (- (System/nanoTime) start-time) 1e9))
        (catch Exception e
          (log/errorf e "Error compiling CLJS..."))))))
 
-(defn build-cljs! [{:keys [source-path] :as cljs-opts}]
+(defn build-cljs! [cljs-opts]
   (assert-cljs
    (let [{:keys [output-dir] :as cljs-opts} (-> cljs-opts
                                                 (merge (:build cljs-opts))
@@ -69,9 +78,9 @@
 
      (.getPath (io/file output-dir "mains")))))
 
-(defn watch-cljs! [{:keys [source-path] :as cljs-opts} latch-ch]
+(defn watch-cljs! [{:keys [source-paths] :as cljs-opts} latch-ch]
   (assert-cljs
-   (let [{file-change-ch :out-ch, file-watch-latch-ch :latch-ch} (watch/watch-files! (io/file source-path))
+   (let [{file-change-ch :out-ch, file-watch-latch-ch :latch-ch} (watch/watch-files! source-paths)
 
          {:keys [target-path web-context-path], :as cljs-opts} (-> cljs-opts
                                                                    (merge (:dev cljs-opts))
@@ -80,7 +89,7 @@
 
      (compile-cljs! cljs-opts cljs-compiler-env)
 
-     (log/infof "Watching CLJS directory '%s'..." source-path)
+     (log/infof "Watching CLJS directories %s..." source-paths)
 
      (go-loop []
        (a/alt!
@@ -89,7 +98,7 @@
                           (recur))
 
          latch-ch (do
-                    (log/infof "Stopped watching CLJS directory '%s'." source-path)
+                    (log/infof "Stopped watching CLJS directories %s." source-paths)
                     (a/close! file-watch-latch-ch))))
 
      (reify CLJSCompiler
@@ -107,6 +116,7 @@
 
 (defn pre-built-cljs-compiler [{:keys [web-context-path] :as cljs-opts}]
   (log/info "Using pre-built CLJS")
+
   (reify CLJSCompiler
     (bidi-routes [_]
       [web-context-path (br/resources {:prefix (get-in cljs-opts [:build :classpath-prefix])})])

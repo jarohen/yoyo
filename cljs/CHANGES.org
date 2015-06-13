@@ -1,5 +1,10 @@
 * Changelog
 ** 0.0.x
+*** 0.0.2
+
+Breaking change - now expects ={:source-paths #{"ui-src"}}= rather than
+={:source-path "ui-src"}=
+
 *** 0.0.1
 
 Initial release
