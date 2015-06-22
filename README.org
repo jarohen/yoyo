@@ -10,7 +10,7 @@ style.
 ** Dependency:
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo "0.0.1"]
+  [jarohen/yoyo "0.0.2"]
 #+END_SRC
 
 There will likely be many breaking changes until 0.1.0!
@@ -32,7 +32,7 @@ discussions.
 
 *** What Yo-yo is:
 
-- A lightweight library (currently 66 LoC!) for starting, reloading
+- A lightweight library (currently ~100 LoC!) for starting, reloading
   and stopping Clojure systems in a functional style.
 - That's it!
 
@@ -141,6 +141,47 @@ What's happening here?
 - =deliver= any value to that promise, =(latch)= will return, and your
   system will stop.
 
+**** Introducing 'ylet'
+
+These nested functions can turn into a 'staircase' very quickly,
+disappearing off the right-hand-side of your editor.
+
+Enter =ylet=, a macro to simplify the nested callbacks:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo :refer [ylet]])
+
+  (yoyo/run-system!
+   (fn [latch]
+     (ylet [db-pool (with-db-pool {...})
+            web-server (with-web-server {:handler (make-handler {:db-pool db-pool})
+                                         :port 3000})]
+       (latch))))
+#+END_SRC
+
+The expressions on the right-hand-size of a =ylet= are all missing
+their final parameter - the callback. =ylet= passes the callback for
+you, binding the callback parameter to the binding on the
+left-hand-side. For example, =with-db-pool= normally expects two
+arguments, but here we're only passing one - =ylet= will pass =(fn
+[db-pool] ...)= as the second.
+
+De-structuring's allowed too, in the usual manner.
+
+Similarly to Clojure's =for=, you can also 'break out' of the =ylet=
+semantics in the bindings, by passing =:let [...]=:
+
+#+BEGIN_SRC clojure
+  (yoyo/run-system!
+   (fn [latch]
+     (ylet [db-pool (with-db-pool {...})
+            :let [server-opts {:handler (make-handler {:db-pool db-pool})
+                               :port 3000}]
+            web-server (with-web-server server-opts)]
+       (latch))))
+#+END_SRC
+
+
 *** The version you'll probably use, 99% of the time:
 
 You'll probably not want to run this system just once, so there are a
@@ -159,16 +200,14 @@ In practice, this looks like:
 
 #+BEGIN_SRC clojure
   (ns myapp.main
-    (:require [yoyo]
+    (:require [yoyo :refer [ylet]]
               ...))
 
   (defn make-system [latch]
-    (with-db-pool {...}
-      (fn [db-pool]
-        (with-web-server {:handler (make-handler {:db-pool db-pool})
-                          :port ...}
-          (fn [web-server]
-            (latch))))))
+    (ylet [db-pool (with-db-pool {...})
+           web-server (with-web-server {:handler (make-handler {:db-pool db-pool})
+                                        :port 3000})]
+      (latch)))
 
   (defn -main [& args]
     (yoyo/set-system-fn! 'myapp.main/make-system)
