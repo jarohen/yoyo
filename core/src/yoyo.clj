@@ -8,10 +8,27 @@
 (defonce ^:private !system-fn (atom nil))
 (defonce ^:private !latch (atom nil))
 
-(defn set-system-fn! [system-fn]
+(defn set-system-fn!
+  "Sets the Yo-yo system function (a namespace-qualified symbol), to be used with `start!`, `stop!`
+  and `reload!`.
+
+  Usage: `(set-system-fn! 'myapp.main/make-system)`"
+
+  [system-fn]
+
   (reset! !system-fn system-fn))
 
-(defn run-system! [f]
+(defn run-system!
+  "Runs the given system, in a new thread, passing it a promise latch.
+
+  The function should start the system, call the latch function, and
+  then stop, closing any necessary resources.
+
+  Returns a promise - deliver any value to this promise to stop the
+  system."
+
+  [f]
+
   (let [latch-promise (promise)
         started-promise (promise)
         latch (fn []
@@ -47,6 +64,12 @@
     (throw (ex-info "Please set a Yo-yo system-fn!" {}))))
 
 (defn start!
+  "Reloads any changed namespaces, then starts the Yo-yo system.
+
+  If `refresh-all?` is passed, reloads all namespaces.
+
+  Usage: `(start!)` or `(start! {:refresh-all? true})`"
+
   ([]
    (start! {:refresh-all? false}))
 
@@ -60,7 +83,10 @@
 
      (throw (ex-info "System already started!" {})))))
 
-(defn stop! []
+(defn stop!
+  "Stops the currently running Yo-yo system, if there is one, no-op if
+  no system is currently running."
+  []
   (let [latch (m/deref-reset! !latch nil)]
     (when latch
       (deliver latch :stop!))
@@ -68,6 +94,9 @@
     (boolean latch)))
 
 (defn reload!
+  "Reloads a Yo-yo system by stopping and restarting it.
+
+  Accepts the same arguments as `start!`"
   ([]
    (reload! {}))
 
@@ -75,7 +104,49 @@
    (stop!)
    (start! opts)))
 
-(defmacro ylet [bindings & body]
+(defmacro ylet
+  "Macro to simplify 'function staircases', similar to Clojure's let.
+
+  Every right-hand-side expression is expected to be short by one
+  parameter - `ylet` passes a continuation function, expecting one
+  argument (the left-hand-size binding) to the expression as its final
+  parameter.
+
+  Similarly to 'for', you can pass `:let [...]` to break out of the
+  special ylet binding behaviour, and revert to a normal set of 'let'
+  bindings.
+
+  Example:
+
+  (defn with-db-pool [opts f]
+    ...
+    (f pool)
+    ...)
+
+  (defn with-web-server [handler opts f]
+    ...
+    (f server)
+    ...)
+
+  (ylet [{:keys [...} :as db-pool} (with-db-pool db-opts)
+         :let [server-opts (read-config ...)]
+         web-server (with-web-server (make-handler {:db-pool db-pool})
+                                     server-opts)]
+    ...)
+
+  ;; gets translated to
+
+  (with-db-pool db-opts
+    (fn [{:keys [...] :as db-pool}]
+      (let [server-opts (read-config ...)]
+        (with-web-server (make-handler {:db-pool db-pool}
+                                       server-opts)
+          (fn [web-server]
+            ...)))))
+    "
+
+  [bindings & body]
+
   (assert (even? (count bindings)) "'ylet' must have an even number of bindings")
 
   (if-let [[bind expr & more] (seq bindings)]
