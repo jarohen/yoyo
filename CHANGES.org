@@ -1,5 +1,15 @@
 * Changelog
 ** 0.0.x
+*** 0.0.2
+
+Added =ylet=.
+
+=start!= and =reload!= now take an optional key - ={:refresh-all?
+true}=, which instructs clojure.tools.namespace to reload all of the
+namespaces, regardless of whether they've changed.
+
+No breaking changes.
+
 *** 0.0.1
 
 Initial release
