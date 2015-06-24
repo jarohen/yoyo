@@ -3,7 +3,8 @@
   yoyo
   (:require [medley.core :as m]
             [clojure.tools.namespace.repl :as tn]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [clojure.test]))
 
 (defonce ^:private !system-fn (atom nil))
 (defonce ^:private !latch (atom nil))

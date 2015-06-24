@@ -10,7 +10,7 @@ style.
 ** Dependency:
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo "0.0.2"]
+  [jarohen/yoyo "0.0.3"]
 #+END_SRC
 
 There will likely be many breaking changes until 0.1.0!
