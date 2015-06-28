@@ -11,6 +11,8 @@ Yo-yo system.
 
 ** Usage
 
+*** Component in Yo-yo
+
 For an individual Component:
 
 #+BEGIN_SRC clojure
@@ -40,3 +42,39 @@ For a whole system:
 
 Likewise, the system will be started before being passed to that
 function, and stopped afterwards.
+
+*** Yo-yo in Component
+
+You can also pull a Yo-yo module into a Component system using this
+libary:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.component :as yc]
+            [com.stuartsierra.component :as c])
+
+  (defn with-db-pool [db-opts f]
+    (let [db-pool (...)]
+      (try
+        (f db-pool)
+
+        (finally
+          ;; stop pool
+          ))))
+
+  (defn make-db-pool-component [db-opts]
+    (yc/->YoyoComponent #(with-db-pool db-opts %)))
+
+
+  ;; Usage:
+  (let [started-system (-> (c/system-map
+                             :yoyo-db-pool (make-db-pool-component ...)
+                             ;; ...
+                             )
+                           (c/start-system))
+
+        db-pool (get-in started-system [:yoyo-db-pool :yoyo-component])]
+
+    ;; ...
+
+    (c/stop-system started-system))
+#+END_SRC
