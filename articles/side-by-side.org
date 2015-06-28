@@ -572,6 +572,10 @@ Clojurians Slack, or e-mail (in my Github profile).
 
 If you've noticed any omissions/mistakes/etc, please file a PR :)
 
+** Next steps
+
+Try ~lein new yoyo-webapp my-webapp -- :reagent~!
+
 Cheers!
 
 James

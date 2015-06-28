@@ -5,11 +5,11 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.7.0-RC1"]
+  :dependencies [[org.clojure/clojure "1.7.0-RC2"]
                  [org.clojure/tools.reader "0.9.2"]
                  [jarohen/embed-nrepl "0.1.0"]
 
-                 [jarohen/yoyo "0.0.1"]
+                 [jarohen/yoyo "0.0.3"]
 
                  [ring/ring-core "1.3.2"]
                  [jarohen/yoyo.aleph "0.0.1"]
@@ -18,7 +18,7 @@
                  [garden "1.2.1"]
                  [ring-middleware-format "0.5.0" :exclusions [ring]]
 
-                 [jarohen/yoyo.cljs "0.0.1"]
+                 [jarohen/yoyo.cljs "0.0.3"]
 
                  [org.clojure/tools.logging "0.3.1"]
                  [org.slf4j/slf4j-api "1.7.9"]

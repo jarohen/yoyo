@@ -8,7 +8,7 @@
   :dependencies [[org.clojure/clojure "1.7.0-RC1"]
                  [jarohen/embed-nrepl "0.1.0"]
 
-                 [jarohen/yoyo "0.0.1"]
+                 [jarohen/yoyo "0.0.3"]
 
                  [ring/ring-core "1.3.0"]
                  [jarohen/yoyo.aleph "0.0.1"]

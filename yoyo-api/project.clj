@@ -1,4 +1,4 @@
-(defproject yoyo-api/lein-template "0.0.2"
+(defproject yoyo-api/lein-template "0.0.3"
   :description "A template to generate a Yo-yo API project"
   :url "https://github.com/james-henderson/yoyo"
   :license {:name "Eclipse Public License"

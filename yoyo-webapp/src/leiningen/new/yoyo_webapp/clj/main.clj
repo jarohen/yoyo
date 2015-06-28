@@ -3,16 +3,14 @@
             [{{name}}.service.cljs :as cljs]
             [clojure.tools.logging :as log]
             [nrepl.embed :as nrepl]
-            yoyo
+            [yoyo :refer [ylet]]
             [yoyo.aleph :as aleph]))
 
 (defn make-system [latch]
-  (cljs/with-cljs-compiler
-    (fn [cljs-compiler]
-      (aleph/with-webserver {:handler (make-handler {:cljs-compiler cljs-compiler})
-                             :port 3000}
-        (fn [_]
-          (latch))))))
+  (ylet [cljs-compiler (cljs/with-cljs-compiler)
+         web-server (aleph/with-webserver {:handler (make-handler {:cljs-compiler cljs-compiler})
+                                           :port 3000})]
+    (latch)))
 
 (defn build! []
   (cljs/build-cljs!)

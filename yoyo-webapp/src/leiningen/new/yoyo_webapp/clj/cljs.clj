@@ -2,7 +2,7 @@
   (:require [yoyo.cljs :as cljs]))
 
 (def cljs-config
-  {:source-path "ui-src"
+  {:source-paths ["ui-src"]
 
    :main '{{name}}.ui.app
 
