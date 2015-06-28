@@ -7,7 +7,7 @@
 
   :dependencies [[org.clojure/clojure "1.7.0-RC2"]
                  [org.clojure/tools.reader "0.9.2"]
-                 [jarohen/embed-nrepl "0.1.0"]
+                 [jarohen/embed-nrepl "0.1.1"]
 
                  [jarohen/yoyo "0.0.3"]
 
@@ -17,6 +17,9 @@
                  [hiccup "1.0.5"]
                  [garden "1.2.1"]
                  [ring-middleware-format "0.5.0" :exclusions [ring]]
+
+                 [org.webjars/jquery "2.1.4"]
+                 [org.webjars/bootstrap "3.3.5"]
 
                  [jarohen/yoyo.cljs "0.0.3"]
 
@@ -29,6 +32,8 @@
                org.clojure/clojurescript]
 
   :profiles {:dev {:dependencies [[org.clojure/clojurescript "0.0-3269"]
+                                  [com.cemerick/piggieback "0.2.1"]
+                                  [weasel "0.7.0"]
                                   {{#flow?}}[jarohen/flow "0.3.0-alpha3"]{{/flow?}}{{#om?}}[org.omcljs/om "0.8.8"]{{#sablono?}}
                                   [sablono "0.3.4"]{{/sablono?}}{{/om?}}{{#reagent?}}[reagent "0.5.0"]{{/reagent?}}]}}
 

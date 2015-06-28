@@ -1,9 +1,12 @@
 (ns {{name}}.ui.app
   (:require [clojure.string :as s]
             [om.core :as om]
-            [om.dom :as dom]))
+            [om.dom :as dom]
+            [nrepl.embed :refer [connect-brepl!]]))
 
 (enable-console-print!)
+
+(connect-brepl!)
 
 (defn hello-world []
   (om/component
@@ -41,6 +44,17 @@
                                     (dom/li nil (dom/p nil "The CLJS entry point is in " (code "ui-src/{{sanitized}}/ui/app.cljs")))
                                     (dom/li nil (dom/p nil "The Clojure system entry point is in " (code "src/{{sanitized}}/service/system.clj")))
                                     (dom/li nil (dom/p nil "The Clojure Ring handler is in " (code "src/{{sanitized}}/service/handler.clj")))))
+
+                    (dom/li nil (dom/p nil "Connect to the CLJS browser REPL")
+                            (dom/ol nil
+                                    (dom/li nil "Connect to the normal server-side REPL (port 7888, by default)")
+                                    (dom/li nil "Evaluate: " (code "(nrepl.embed/->brepl)"))
+                                    (dom/li nil "Refresh this page")
+                                    (dom/li nil "When you get a " (code "cljs.user =>") " prompt, you can test it with:"
+                                            (dom/ul nil
+                                                    (dom/li nil (code "(+ 1 1)"))
+                                                    (dom/li nil (code "(js/window.alert \"Hello world!\")"))
+                                                    (dom/li nil (code "(set! (.-backgroundColor js/document.body.style) \"green\")"))))))
 
                     (dom/li nil (dom/p nil "Any trouble, let me know - either through GitHub or on Twitter at " (dom/a #js {:href "https://twitter.com/jarohen"} "@jarohen")))
 

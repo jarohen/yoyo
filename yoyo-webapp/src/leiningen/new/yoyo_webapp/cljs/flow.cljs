@@ -1,8 +1,11 @@
 (ns {{name}}.ui.app
   (:require [flow.core :as f :include-macros true]
-            [clojure.string :as s]))
+            [clojure.string :as s]
+            [nrepl.embed :refer [connect-brepl!]]))
 
 (enable-console-print!)
+
+(connect-brepl!)
 
 (set! (.-onload js/window)
       (fn []
@@ -38,6 +41,17 @@
                 [:li [:p "The CLJS entry point is in " [code "ui-src/{{sanitized}}/ui/app.cljs"]]]
                 [:li [:p "The Clojure system entry point is in " [code "src/{{sanitized}}/service/system.clj"]]]
                 [:li [:p "The Clojure Ring handler is in " [code "src/{{sanitized}}/service/handler.clj"]]]]]
+
+              [:li [:p "Connect to the CLJS browser REPL"]
+               [:ol
+                [:li "Connect to the normal server-side REPL (port 7888, by default)"]
+                [:li "Evaluate: " [code "(nrepl.embed/->brepl)"]]
+                [:li "Refresh this page"]
+                [:li "When you get a " [code "cljs.user =>"] " prompt, you can test it with:"
+                 [:ul
+                  [:li [code "(+ 1 1)"]]
+                  [:li [code "(js/window.alert \"Hello world!\")"]]
+                  [:li [code "(set! (.-backgroundColor js/document.body.style) \"green\")"]]]]]]
 
               [:li [:p "Any trouble, let me know - either through GitHub or on Twitter at " [:a {:href "https://twitter.com/jarohen"} "@jarohen"]]]
 

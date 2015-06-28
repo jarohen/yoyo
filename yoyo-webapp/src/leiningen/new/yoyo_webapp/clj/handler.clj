@@ -11,7 +11,8 @@
 
 (def site-routes
   ["" {"/" {:get :page-handler}
-       "/css" {"/site.css" {:get :site-css}}}])
+       "/css" {"/site.css" {:get :site-css}}
+       "/webjars" (br/resources {:prefix "META-INF/resources/webjars"})}])
 
 (defn page-handler [{:keys [cljs-compiler]}]
   (fn [req]
@@ -20,8 +21,9 @@
           [:head
            [:title "{{name}} - CLJS Single Page Web Application"]
 
-           (include-js "//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js")
-           (include-css "//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css")
+           (include-js "/webjars/jquery/2.1.4/jquery.min.js")
+           (include-js "/webjars/bootstrap/3.3.5/js/bootstrap.min.js")
+           (include-css "/webjars/bootstrap/3.3.5/css/bootstrap.min.css")
 
            (include-js (cljs/path-for-js cljs-compiler))
            (include-css (bidi/path-for site-routes :site-css :request-method :get))]
