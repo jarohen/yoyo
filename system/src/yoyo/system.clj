@@ -1,0 +1,83 @@
+(ns yoyo.system
+  (:require [medley.core :as m]
+            [com.stuartsierra.dependency :as deps]))
+
+(defn- constant-value [v]
+  (fn [app f]
+    (f v)))
+
+(defn- analyze-deps [system]
+  (->> (for [[k v] system]
+         [k {:component-fn (if (fn? v)
+                             v
+                             (constant-value v))
+             :deps (::deps (meta v))}])
+       (into {})))
+
+(defn sort-deps [analyzed-deps]
+  (-> (reduce (fn [graph [component-key {:keys [deps]}]]
+                (reduce (fn [graph [dep-key dep-val]]
+                          (deps/depend graph component-key dep-val))
+                        graph
+                        deps))
+              (deps/graph)
+              analyzed-deps)
+
+      deps/topo-sort))
+
+(defn make-system* [system-fn]
+  (fn [latch]
+    (let [system (system-fn)
+          analyzed-deps (analyze-deps system)
+
+          system-to-run (reduce (fn [f dep-key]
+                                  (fn [app]
+                                    (let [{:keys [component-fn deps]} (get analyzed-deps dep-key)]
+                                      (component-fn (m/map-vals #(get app %) (or deps {}))
+                                                    (fn [component-value]
+                                                      (f (assoc app dep-key component-value)))))))
+                                latch
+                                (reverse (sort-deps analyzed-deps)))]
+      (system-to-run {}))))
+
+(defmacro make-system [system]
+  `(make-system* (fn [] ~system)))
+
+(defn with [component deps]
+  (-> component
+      (vary-meta assoc ::deps (cond
+                                (vector? deps) (zipmap deps deps)
+                                (map? deps) deps))))
+
+(defn with-system-put-to [system sym]
+  (fn [latch]
+    (system (fn [started-system]
+              (let [the-ns (doto (symbol (namespace sym))
+                             create-ns)
+                    the-name (symbol (name sym))]
+                (intern the-ns the-name started-system)
+
+                (let [result (latch started-system)]
+                  (intern the-ns the-name nil)
+                  result))))))
+
+
+(comment
+  (defn with-c1 [app f]
+    (f :a-c1))
+
+  (defn with-c2 [{:keys [c1]} f]
+    (f {:my-c1 c1}))
+
+  (defn with-c3 [{:keys [c1 c2]} f]
+    (f {:my-c2 c2
+        :my-c1 c1}))
+
+  (let [system-fn (-> (make-system {:c1 with-c1
+                                    :c2 (-> with-c2
+                                            (with {:c1 :c1}))
+                                    :c3 (-> with-c3
+                                            (with [:c1 :c2]))})
+                      (with-system-put-to 'user/foo-system))]
+    (system-fn (fn [running-system]
+                 (prn running-system (eval 'user/foo-system) (= running-system (eval 'user/foo-system)))))))
