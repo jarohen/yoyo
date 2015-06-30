@@ -25,7 +25,7 @@
 
       deps/topo-sort))
 
-(defn make-system* [system-fn]
+(defn make-system [system-fn]
   (fn [latch]
     (let [system (system-fn)
           analyzed-deps (analyze-deps system)
@@ -41,9 +41,6 @@
                                 latch
                                 (reverse (sort-deps analyzed-deps)))]
       (system-to-run {}))))
-
-(defmacro make-system [system]
-  `(make-system* (fn [] ~system)))
 
 (defn with [component deps]
   (-> component
@@ -85,12 +82,13 @@
     (f {:my-c2 c2
         :my-c1 c1}))
 
-  (let [system-fn (-> (make-system {:c1 with-c1
-                                    :c2 (-> with-c2
-                                            (with [:c1]))
-                                    :c3 (-> with-c3
-                                            (with {:c1 [:c1 :the-c1]
-                                                   :c2 :c2}))})
+  (let [system-fn (-> (make-system (fn []
+                                     {:c1 with-c1
+                                      :c2 (-> with-c2
+                                              (with [:c1]))
+                                      :c3 (-> with-c3
+                                              (with {:c1 [:c1 :the-c1]
+                                                     :c2 :c2}))}))
                       (with-system-put-to 'user/foo-system))]
     (system-fn (fn [running-system]
                  (prn running-system (eval 'user/foo-system) (= running-system (eval 'user/foo-system)))))))
