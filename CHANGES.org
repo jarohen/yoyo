@@ -1,15 +1,19 @@
 * Changelog
 ** 0.0.x
+*** 0.0.4
+
+The 'latch' function from ~run-system!~ now accepts any number of arguments
+
 *** 0.0.3
 
-No breaking changes - explicitly requiring =clojure.test= in =yoyo=
+No breaking changes - explicitly requiring ~clojure.test~ in ~yoyo~
 
 *** 0.0.2
 
-Added =ylet=.
+Added ~ylet~.
 
-=start!= and =reload!= now take an optional key - ={:refresh-all?
-true}=, which instructs clojure.tools.namespace to reload all of the
+~start!~ and ~reload!~ now take an optional key - ~{:refresh-all?
+true}~, which instructs clojure.tools.namespace to reload all of the
 namespaces, regardless of whether they've changed.
 
 No breaking changes.

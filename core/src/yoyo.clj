@@ -32,7 +32,7 @@
 
   (let [latch-promise (promise)
         started-promise (promise)
-        latch (fn []
+        latch (fn [& _]
                 (log/info "Started system.")
                 (deliver started-promise ::success)
 
