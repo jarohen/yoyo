@@ -32,10 +32,12 @@
 
           system-to-run (reduce (fn [f dep-key]
                                   (fn [app]
-                                    (let [{:keys [component-fn deps]} (get analyzed-deps dep-key)]
+                                    (if-let [{:keys [component-fn deps]} (get analyzed-deps dep-key)]
                                       (component-fn (m/map-vals #(get-in app %) (or deps {}))
                                                     (fn [component-value]
-                                                      (f (assoc app dep-key component-value)))))))
+                                                      (f (assoc app dep-key component-value))))
+
+                                      (throw (ex-info "Can't find dependency:" {:dep dep-key})))))
                                 latch
                                 (reverse (sort-deps analyzed-deps)))]
       (system-to-run {}))))
