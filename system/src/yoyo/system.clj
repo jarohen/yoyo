@@ -16,7 +16,7 @@
 
 (defn sort-deps [analyzed-deps]
   (-> (reduce (fn [graph [component-key {:keys [deps]}]]
-                (reduce (fn [graph [dep-key dep-val]]
+                (reduce (fn [graph [dep-key [dep-val & _]]]
                           (deps/depend graph component-key dep-val))
                         graph
                         deps))
@@ -33,7 +33,7 @@
           system-to-run (reduce (fn [f dep-key]
                                   (fn [app]
                                     (let [{:keys [component-fn deps]} (get analyzed-deps dep-key)]
-                                      (component-fn (m/map-vals #(get app %) (or deps {}))
+                                      (component-fn (m/map-vals #(get-in app %) (or deps {}))
                                                     (fn [component-value]
                                                       (f (assoc app dep-key component-value)))))))
                                 latch
@@ -45,9 +45,14 @@
 
 (defn with [component deps]
   (-> component
-      (vary-meta assoc ::deps (cond
-                                (vector? deps) (zipmap deps deps)
-                                (map? deps) deps))))
+      (vary-meta assoc ::deps (->> (cond
+                                     (vector? deps) (zipmap deps deps)
+                                     (map? deps) deps)
+
+                                   (m/map-vals (fn [dep]
+                                                 (if (vector? dep)
+                                                   dep
+                                                   [dep])))))))
 
 (defn with-system-put-to [system sym]
   (fn [latch]
@@ -64,7 +69,7 @@
 
 (comment
   (defn with-c1 [app f]
-    (f :a-c1))
+    (f {:the-c1 :a-c1}))
 
   (defn with-c2 [{:keys [c1]} f]
     (f {:my-c1 c1}))
@@ -75,9 +80,10 @@
 
   (let [system-fn (-> (make-system {:c1 with-c1
                                     :c2 (-> with-c2
-                                            (with {:c1 :c1}))
+                                            (with [:c1]))
                                     :c3 (-> with-c3
-                                            (with [:c1 :c2]))})
+                                            (with {:c1 [:c1 :the-c1]
+                                                   :c2 :c2}))})
                       (with-system-put-to 'user/foo-system))]
     (system-fn (fn [running-system]
                  (prn running-system (eval 'user/foo-system) (= running-system (eval 'user/foo-system)))))))
