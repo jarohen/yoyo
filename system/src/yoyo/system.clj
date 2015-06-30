@@ -56,6 +56,11 @@
                                                    dep
                                                    [dep])))))))
 
+(defn without-lifecycle [f]
+  (with-meta (fn [app latch]
+               (latch (f app)))
+    (meta f)))
+
 (defn with-system-put-to [system sym]
   (fn [latch]
     (system (fn [started-system]
