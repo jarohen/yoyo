@@ -1,5 +1,6 @@
 (ns yoyo.system
   (:require [medley.core :as m]
+            [schema.core :as sc]
             [com.stuartsierra.dependency :as deps]))
 
 (defn- constant-value [v]
@@ -42,16 +43,9 @@
                                 (reverse (sort-deps analyzed-deps)))]
       (system-to-run {}))))
 
-(defn with [component deps]
+(sc/defn ^:always-validate using [component deps :- {sc/Any [sc/Any]}]
   (-> component
-      (vary-meta assoc ::deps (->> (cond
-                                     (vector? deps) (zipmap deps deps)
-                                     (map? deps) deps)
-
-                                   (m/map-vals (fn [dep]
-                                                 (if (vector? dep)
-                                                   dep
-                                                   [dep])))))))
+      (vary-meta assoc ::deps deps)))
 
 (defn without-lifecycle [f]
   (with-meta (fn [app latch]
@@ -85,10 +79,12 @@
   (let [system-fn (-> (make-system (fn []
                                      {:c1 with-c1
                                       :c2 (-> with-c2
-                                              (with [:c1]))
+                                              (using {:c1 [:c1]}))
                                       :c3 (-> with-c3
-                                              (with {:c1 [:c1 :the-c1]
-                                                     :c2 :c2}))}))
+                                              (using {:c2 [:c2]
+                                                      :c1 [:c1 :the-c1]}))}))
                       (with-system-put-to 'user/foo-system))]
     (system-fn (fn [running-system]
-                 (prn running-system (eval 'user/foo-system) (= running-system (eval 'user/foo-system)))))))
+                 (clojure.pprint/pprint running-system)
+                 (clojure.pprint/pprint (eval 'user/foo-system))
+                 (prn (= running-system (eval 'user/foo-system)))))))
