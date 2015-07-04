@@ -19,7 +19,8 @@
   (-> (reduce (fn [graph [component-key {:keys [deps]}]]
                 (reduce (fn [graph [dep-key [dep-val & _]]]
                           (deps/depend graph component-key dep-val))
-                        graph
+                        (-> graph
+                            (deps/depend ::system component-key))
                         deps))
               (deps/graph)
               analyzed-deps)
@@ -40,7 +41,10 @@
 
                                       (throw (ex-info "Can't find dependency:" {:dep dep-key})))))
                                 latch
-                                (reverse (sort-deps analyzed-deps)))]
+                                (->> analyzed-deps
+                                     sort-deps
+                                     (remove #{::system})
+                                     reverse))]
       (system-to-run {}))))
 
 (sc/defn ^:always-validate using [component deps :- {sc/Any [sc/Any]}]
