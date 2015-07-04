@@ -1,0 +1,34 @@
+{
+    "configuration": {
+        "appenders": {
+            "Console": {
+                "name":"Console",
+                "target":"SYSTEM_OUT",
+                "PatternLayout": {
+                    "pattern":"%d [%t] %-5level %logger{36} - %msg%n"
+                }
+            }
+        },
+
+        "loggers": {
+            "root": {
+                "level":"debug",
+                "appender-ref": {
+                    "ref":"Console"
+                }
+            },
+
+            "logger": [
+                {
+                    "name":"shadow.cljs.build",
+                    "level":"debug"
+                },
+
+                {
+                    "name":"io.netty",
+                    "level":"info"
+                }
+            ]
+        }
+    }
+}
