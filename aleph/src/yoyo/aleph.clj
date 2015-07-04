@@ -3,7 +3,7 @@
             [clojure.tools.logging :as log]))
 
 (defn with-server [{:keys [handler server-opts]} f]
-  (log/infof "Starting web server on port %d..." port)
+  (log/infof "Starting web server on port %d..." (:port server-opts))
   (let [server (http/start-server (some-fn handler
                                            (constantly {:status 404
                                                         :body "Not found"}))

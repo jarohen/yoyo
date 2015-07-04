@@ -3,7 +3,7 @@
 ** Dependency
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo.http-kit "0.0.3"]
+  [jarohen/yoyo.http-kit "0.0.4"]
 #+END_SRC
 
 ** Usage

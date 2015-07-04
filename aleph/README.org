@@ -3,7 +3,7 @@
 ** Dependency
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo.aleph "0.0.2"]
+  [jarohen/yoyo.aleph "0.0.3"]
 #+END_SRC
 
 ** Usage
