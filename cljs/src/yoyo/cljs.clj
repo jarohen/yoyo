@@ -135,7 +135,7 @@
     (boolean (or (io/resource (str classpath-prefix "/modules"))
                  (io/resource (str classpath-prefix "/main.js"))))))
 
-(defn with-cljs-compiler [cljs-opts f]
+(defn with-cljs-compiler [{:keys [cljs-opts]} f]
   (if-not (pre-built? cljs-opts)
     (let [latch-ch (a/chan)]
       (try

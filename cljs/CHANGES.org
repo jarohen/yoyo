@@ -1,5 +1,10 @@
 * Changelog
 ** 0.0.x
+*** 0.0.4
+
+Breaking change - ~with-cljs-compiler~ now expects options under a
+~:cljs-opts~ key
+
 *** 0.0.3
 
 Bugfix - minor change to clojure.tools.logging wrapper
