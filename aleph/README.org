@@ -3,7 +3,7 @@
 ** Dependency
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo.aleph "0.0.1"]
+  [jarohen/yoyo.aleph "0.0.2"]
 #+END_SRC
 
 ** Usage
@@ -21,9 +21,9 @@
   (defn make-system [latch]
     (...
      (fn [...]
-       (aleph/with-web-server {:handler (make-handler ...)
-                               :port ...
-                               :aleph-opts {}} ; anything else you'd pass to aleph.http/start-server
+       (aleph/with-server {:handler (make-handler ...)
+                           :server-opts {:port ...
+                                         ...}} ; anything else you'd pass to aleph.http/start-server
          (fn [server]
            ...)))))
 #+END_SRC
