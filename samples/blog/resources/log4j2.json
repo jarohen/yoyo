@@ -20,8 +20,8 @@
 
             "logger": [
                 {
-                    "name":"shadow.cljs.build",
-                    "level":"debug"
+                    "name":"datomic.db",
+                    "level":"info"
                 },
 
                 {

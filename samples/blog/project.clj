@@ -19,12 +19,18 @@
                  [garden "1.2.1"]
                  [ring-middleware-format "0.5.0" :exclusions [ring]]
 
+                 [com.datomic/datomic-free "0.9.5186" :exclusions [com.amazonaws/aws-java-sdk
+                                                                   org.slf4j/slf4j-nop
+                                                                   org.slf4j/jcl-over-slf4j
+                                                                   org.slf4j/jul-to-slf4j
+                                                                   org.slf4j/log4j-over-slf4j]]
+
+                 [jarohen/yoyo.cljs "0.0.4"]
                  [org.webjars/jquery "2.1.4"]
                  [org.webjars/bootstrap "3.3.5"]
 
-                 [jarohen/yoyo.cljs "0.0.4"]
-
                  [jarohen/nomad "0.8.0-beta3"]
+                 [prismatic/schema "0.4.3"]
 
                  [org.clojure/tools.logging "0.3.1"]
                  [org.slf4j/slf4j-api "1.7.9"]
