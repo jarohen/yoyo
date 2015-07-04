@@ -6,7 +6,7 @@ system, based on [[http://commons.apache.org/proper/commons-dbcp/][Apache Common
 ** Dependency
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo.jdbc-pool "0.0.2"]
+  [jarohen/yoyo.jdbc-pool "0.0.3"]
 #+END_SRC
 
 ** Usage
@@ -14,15 +14,15 @@ system, based on [[http://commons.apache.org/proper/commons-dbcp/][Apache Common
 #+BEGIN_SRC clojure
   (:require [yoyo.jdbc-pool :refer [with-db-pool]])
 
-  (with-db-pool {:driver "org.postgresql.Driver" ; optional - we'll guess it if you don't specify one!
-                 :subprotocol "postgresql"
-                 :host "..."
-                 :port 5432
-                 :username "..."
-                 :password "..."
-                 :db "..."
-                 :max-total 8
-                 :max-idle 8}
+  (with-db-pool {:db-config {:driver "org.postgresql.Driver" ; optional - we'll guess it if you don't specify one!
+                             :subprotocol "postgresql"
+                             :host "..."
+                             :port 5432
+                             :username "..."
+                             :password "..."
+                             :db "..."
+                             :max-total 8
+                             :max-idle 8}}
     (fn [db-pool]
       ...
       ))

@@ -10,7 +10,7 @@
    "sqlite" "org.sqlite.JDBC"
    "h2" "org.h2.Driver"})
 
-(defn with-db-pool [{:keys [driver subprotocol host port username password db max-total max-idle] :as db-config} f]
+(defn with-db-pool [{{:keys [driver subprotocol host port username password db max-total max-idle]} :db-config} f]
   (log/info "Starting JDBC pool...")
 
   (let [pool {:datasource (doto (BasicDataSource.)
