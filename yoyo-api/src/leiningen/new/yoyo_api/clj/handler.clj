@@ -13,7 +13,7 @@
   {::default-route (fn [req]
                      (response "Hello world from Yo-yo! Try `(yoyo/reload!)` to completely reload the application"))})
 
-(defn make-handler []
+(defn make-handler [app]
   (br/make-handler ["" api-routes]
 
                    (some-fn (api-handlers)

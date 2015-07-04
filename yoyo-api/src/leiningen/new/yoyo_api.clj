@@ -16,9 +16,10 @@
              ["project.clj" (render "project.clj" data)]
              [".gitignore" (render "gitignore" data)]
              ["resources/log4j2.json" (render "resources/log4j2.json" data)]
+             ["resources/{{name}}-config.edn" (render "resources/config.edn" data)]
 
              ["src/{{sanitized}}/service/main.clj" (render "clj/main.clj" data)]
              ["src/{{sanitized}}/service/handler.clj" (render "clj/handler.clj" data)]))
 
   (println "Created!")
-  (println "To start the application, run `lein dev`, and then go to http://localhost:3000"))
+  (println "To start the application, run `lein dev`, and then `curl http://localhost:3000`"))

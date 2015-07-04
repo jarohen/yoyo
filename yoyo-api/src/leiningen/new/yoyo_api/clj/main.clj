@@ -1,14 +1,24 @@
 (ns {{name}}.service.main
   (:require [{{name}}.service.handler :refer [make-handler]]
-            [clojure.tools.logging :as log]
+            [clojure.java.io :as io]
+            [nomad :refer [read-config]]
             [nrepl.embed :as nrepl]
-            [yoyo :refer [ylet]]
-            [yoyo.aleph :as aleph]))
+            [yoyo.aleph :as aleph]
+            [yoyo :as y]
+            [yoyo.system :as ys]))
 
-(defn make-system [latch]
-  (ylet [web-server (aleph/with-webserver {:handler (make-handler)
-                                           :port 3000})]
-    (latch)))
+(def make-system
+  (-> (ys/make-system (fn []
+                        {:config (read-config (io/resource "{{name}}-config.edn"))
+
+                         :handler (-> make-handler
+                                      ys/without-lifecycle)
+
+                         :web-server (-> aleph/with-server
+                                         (ys/using {:handler [:handler]
+                                                    :server-opts [:config :webserver-opts]}))}))
+
+      (ys/with-system-put-to 'user/system)))
 
 (defn -main []
   (nrepl/start-nrepl! {:port 7888})
