@@ -37,7 +37,7 @@
     [:li [:p "Start making your webapp!"]
      [:ul
       [:li [:p "The CLJS entry point is in " [code "ui-src/{{sanitized}}/ui/app.cljs"]]]
-      [:li [:p "The Clojure system entry point is in " [code "src/{{sanitized}}/service/system.clj"]]]
+      [:li [:p "The Clojure entry point is in " [code "src/{{sanitized}}/service/main.clj"]]]
       [:li [:p "The Clojure Ring handler is in " [code "src/{{sanitized}}/service/handler.clj"]]]]]
 
     [:li [:p "Connect to the CLJS browser REPL"]

@@ -17,8 +17,8 @@
            :pretty-print? false
            :classpath-prefix "js"}})
 
-(defn with-cljs-compiler [f]
-  (cljs/with-cljs-compiler cljs-config f))
+(defn with-cljs-compiler [_ f]
+  (cljs/with-cljs-compiler {:cljs-opts cljs-config} f))
 
 (defn build-cljs! []
   (cljs/build-cljs! cljs-config))

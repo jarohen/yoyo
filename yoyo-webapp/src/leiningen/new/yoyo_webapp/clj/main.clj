@@ -1,16 +1,26 @@
 (ns {{name}}.service.main
-  (:require [{{name}}.service.handler :refer [make-handler]]
-            [{{name}}.service.cljs :as cljs]
+  (:require [{{name}}.service.cljs :as cljs]
+            [{{name}}.service.handler :refer [make-handler]]
+            [clojure.java.io :as io]
             [clojure.tools.logging :as log]
+            [nomad :refer [read-config]]
             [nrepl.embed :as nrepl]
-            [yoyo :refer [ylet]]
-            [yoyo.aleph :as aleph]))
+            [yoyo.aleph :as aleph]
+            [yoyo :as y]
+            [yoyo.system :as ys]))
 
-(defn make-system [latch]
-  (ylet [cljs-compiler (cljs/with-cljs-compiler)
-         web-server (aleph/with-webserver {:handler (make-handler {:cljs-compiler cljs-compiler})
-                                           :port 3000})]
-    (latch)))
+(def make-system
+  (-> (ys/make-system (fn []
+                        {:config (read-config (io/resource "{{name}}-config.edn"))
+                         :cljs-compiler cljs/with-cljs-compiler
+                         :handler (-> make-handler
+                                      (ys/using {:cljs-compiler [:cljs-compiler]})
+                                      ys/without-lifecycle)
+
+                         :web-server (-> aleph/with-server
+                                         (ys/using {:handler [:handler]
+                                                    :server-opts [:config :webserver-opts]}))}))
+      (ys/with-system-put-to 'user/system)))
 
 (defn build! []
   (cljs/build-cljs!)

@@ -30,6 +30,7 @@
                                                       :reagent? (= :reagent frontend-library)))]
                [".gitignore" (render "gitignore" data)]
                ["resources/log4j2.json" (render "resources/log4j2.json" data)]
+               ["resources/{{name}}-config.edn" (render "resources/config.edn" data)]
 
                ["src/{{sanitized}}/service/main.clj" (render "clj/main.clj" data)]
 
