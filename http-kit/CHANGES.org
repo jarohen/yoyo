@@ -1,5 +1,31 @@
 * Changelog
 ** 0.0.x
+*** 0.0.3
+
+Breaking changes:
+
+- ~with-webserver~ renamed to ~with-server~
+- ~:port~ and ~:httpkit-opts~ now live under one ~:server-opts~ map
+
+Migration:
+
+0.0.2:
+
+#+BEGIN_SRC clojure
+  (with-webserver {:handler ...
+                   :port 3000
+                   :httpkit-opts {:option-key "option-val"
+                                  ...}})
+#+END_SRC
+
+0.0.3:
+
+#+BEGIN_SRC clojure
+  (with-server {:handler ...
+                :server-opts {:port 3000
+                              :option-key "option-val"
+                              ...}})
+#+END_SRC
 *** 0.0.2
 
 Breaking change - the function passed to with-webserver should now
