@@ -1,10 +1,11 @@
 (ns blog.service.handler
   (:require [blog.service.css :as css]
+            [blog.api-routes :refer [api-routes]]
             [bidi.bidi :as bidi]
             [bidi.ring :as br]
-            [yoyo.cljs :as cljs]
             [hiccup.page :refer [html5 include-css include-js]]
-            [ring.util.response :refer [response content-type]]))
+            [ring.util.response :refer [response content-type]]
+            [yoyo.cljs :as cljs]))
 
 (def site-routes
   ["" {"/" {:get :page-handler}
@@ -33,15 +34,12 @@
                     (-> (response (css/site-css))
                         (content-type "text/css")))})
 
-(def api-routes
-  ["/api" {}])
-
 (defn api-handlers []
   {})
 
 (defn make-handler [{:keys [cljs-compiler] :as handler-opts}]
   (br/make-handler ["" [site-routes
-                        api-routes
+                        (api-routes)
                         (cljs/bidi-routes cljs-compiler)]]
 
                    (some-fn (site-handlers handler-opts)
