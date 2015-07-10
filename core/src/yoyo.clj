@@ -76,11 +76,12 @@
 
   ([{:keys [refresh-all?]}]
    (if-not @!latch
-     (binding [*ns* *ns*  ; *ns* seems to have to be thread-bound for refresh to work
+     (binding [*ns* *ns* ; *ns* seems to have to be thread-bound for refresh to work
                clojure.test/*load-tests* false]
-       (if refresh-all?
-         (tn/refresh-all :after 'yoyo/do-start!)
-         (tn/refresh :after 'yoyo/do-start!)))
+       (when refresh-all?
+         (tn/clear))
+
+       (tn/refresh :after 'yoyo/do-start!))
 
      (throw (ex-info "System already started!" {})))))
 
