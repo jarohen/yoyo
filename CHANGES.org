@@ -1,8 +1,13 @@
 * Changelog
 ** 0.0.x
+*** 0.0.5
+
+No breaking changes - ~{:refresh-all? true}~ passed to ~yoyo/reload!~
+now clears the c.t.n. tracker.
+
 *** 0.0.4
 
-The 'latch' function from ~run-system!~ now accepts any number of arguments
+No breaking changes - the 'latch' function from ~run-system!~ now accepts any number of arguments
 
 *** 0.0.3
 
