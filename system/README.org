@@ -19,6 +19,14 @@ Add the following to your build tool of choice:
   [jarohen/yoyo.system "0.0.1"]
 #+END_SRC
 
+** Contents                                                            :TOC_2_gh:
+
+ - [[#making-a-single-component][Making a single component]]
+ - [[#testing-our-component][Testing our component]]
+ - [[#running-our-first-system][Running our first system]]
+ - [[#accessing-the-running-system][Accessing the running system]]
+ - [[#using-protocolsrecords-as-components][Using Protocols/Records as components]]
+
 ** Making a single component
 
 We start with a single component managing the lifecycle of a
