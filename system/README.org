@@ -384,6 +384,10 @@ This removes the need for the workarounds described in [[http://blog.juxt.pro/po
                 (status 204)))))))
 #+END_SRC
 
+The handler doesn't need a lifecycle, either, so we can just accept
+the dependency map and return the handler (remembering to use
+~ys/without-lifecycle~ when we include it in the dependency map)
+
 *** The dependency map
 
 The dependency map looks something like this:
