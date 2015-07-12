@@ -16,7 +16,7 @@ with a couple of key benefits:
 Add the following to your build tool of choice:
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo.system "0.0.1-alpha1"]
+  [jarohen/yoyo.system "0.0.1"]
 #+END_SRC
 
 ** Making a single component
