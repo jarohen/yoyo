@@ -65,6 +65,8 @@ A few notes:
 - The started ~db-pool~ resource is in scope of the 'stop' part of the
   function - no need for a separate function.
 - There's no dependency on anything yoyo-related here!
+- You can validate the parameters to your component function against a
+  [[https://github.com/Prismatic/schema][Schema]] - they're all present and started by this point.
 
 ** Testing our component
 
@@ -345,8 +347,9 @@ Note that the ~db-pool~ passed to the record here is:
 - not nil, at any point, even at record construction
 - started, even at record construction
 
-This removes the need for the workarounds described in [[http://blog.juxt.pro/posts/component-meet-schema.html][JUXT's
-'Component, meet Schema' blog]]
+This means that the parameters to the record are able to be validated
+against a [[https://github.com/Prismatic/schema][Schema]] at record-construction time, removing the need for
+the workarounds described in JUXT's [[http://blog.juxt.pro/posts/component-meet-schema.html]['Component, meet Schema']] blog.
 
 *** Next, the handler:
 
