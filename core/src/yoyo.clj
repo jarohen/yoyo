@@ -2,12 +2,10 @@
       :clojure.tools.namespace.repl/unload false}
   yoyo
   (:require [medley.core :as m]
-            [clojure.tools.namespace.repl :as tn]
+            [clojure.tools.namespace.repl :as ctn]
             [clojure.tools.logging :as log]
             [clojure.test]))
 
-(defonce ^:private !system-fn (atom nil))
-(defonce ^:private !latch (atom nil))
 (defn run-system
   "Runs the given system, in a new thread, passing it a promise latch.
 
@@ -46,35 +44,40 @@
           @!system-result)
         (throw started-result)))))
 
-(defn- do-start! []
-  (if-let [system-fn @!system-fn]
-    (do
-      (require (symbol (namespace system-fn)))
-      (reset! !latch (run-system! (resolve system-fn)))
-      true)
+(defonce ^:private !system-fn (atom nil))
+(defonce ^:private !latch (atom nil))
 
-    (throw (ex-info "Please set a Yo-yo system-fn!" {}))))
+(defn reresolve [v]
+  (if (var? v)
+    (let [v-ns (doto (ns-name (:ns (meta v)))
+                 require)]
+      (ns-resolve (find-ns v-ns)
+                  (:name (meta v))))
+
+    v))
+
+(defn set-system-fn!
+  "Sets the Yo-yo system fn, to be used with `start!`, `stop!` and
+  `reload!`.
+
+  Usage: `(set-system-fn! #'make-system)`"
+
+  [system-fn]
+
+  (reset! !system-fn (comp reresolve system-fn)))
+
 
 (defn start!
-  "Reloads any changed namespaces, then starts the Yo-yo system.
+  "Starts the Yo-yo system, calling the function set by
+  `set-system-fn!`"
+  []
 
-  If `refresh-all?` is passed, reloads all namespaces.
+  (assert (nil? @!latch) "System already started!")
 
-  Usage: `(start!)` or `(start! {:refresh-all? true})`"
+  (if-let [system-fn @!system-fn]
+    (reset! !latch (run-system system-fn))
 
-  ([]
-   (start! {:refresh-all? false}))
-
-  ([{:keys [refresh-all?]}]
-   (if-not @!latch
-     (binding [*ns* *ns* ; *ns* seems to have to be thread-bound for refresh to work
-               clojure.test/*load-tests* false]
-       (when refresh-all?
-         (tn/clear))
-
-       (tn/refresh :after 'yoyo/do-start!))
-
-     (throw (ex-info "System already started!" {})))))
+    (throw (ex-info "Please set a Yo-yo system-var!" {}))))
 
 (defn stop!
   "Stops the currently running Yo-yo system, if there is one, no-op if
@@ -88,15 +91,21 @@
       (latch))))
 
 (defn reload!
-  "Reloads a Yo-yo system by stopping and restarting it.
-
-  Accepts the same arguments as `start!`"
+  "Reloads a Yo-yo system by stopping and restarting it."
   ([]
-   (reload! {}))
+   (reload! {:refresh? true
+             :refresh-all? false}))
 
-  ([{:keys [refresh-all?] :as opts}]
-   (stop!)
-   (start! opts)))
+  ([{:keys [refresh? refresh-all?]}]
+   (let [system-result (stop!)]
+
+     (when refresh-all?
+       (ctn/clear))
+
+     (when refresh?
+       (ctn/refresh))
+
+     (start!))))
 
 (defmacro ylet
   "Macro to simplify 'function staircases', similar to Clojure's let.

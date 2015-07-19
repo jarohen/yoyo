@@ -188,7 +188,7 @@ You'll probably not want to run this system just once, so there are a
 number of lifecycle functions included for easy starting, stopping and
 reloading:
 
-- =(yoyo/set-system-fn! 'system-fn-sym)= - stores a symbol pointing to
+- =(yoyo/set-system-fn! #'system-fn)= - stores a var pointing to
   a system function (a function accepting a latch, like the one above)
   for use with the functions below.
 - =(yoyo/start!)= - starts a system by calling the stored =system-fn=.
@@ -210,18 +210,13 @@ In practice, this looks like:
       (latch)))
 
   (defn -main [& args]
-    (yoyo/set-system-fn! 'myapp.main/make-system)
+    (yoyo/set-system-fn! #'make-system)
 
     (yoyo/start!))
 #+END_SRC
 
 In the REPL, later, you can call =(yoyo/stop!)= and =(yoyo/reload!)=
 to your heart's content :)
-
-Why pass a symbol to =set-system-fn!=? So that you can make a change
-to =make-system= (or anywhere else in your codebase, for that matter)
-and have that change picked up on reload, without needing to run
-=-main= again!
 
 *** That's all folks!
 
