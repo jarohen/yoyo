@@ -59,10 +59,14 @@
 
 (defn reresolve [v]
   (if (var? v)
-    (let [v-ns (doto (ns-name (:ns (meta v)))
-                 require)]
-      (ns-resolve (find-ns v-ns)
-                  (:name (meta v))))
+    #?(:clj
+       (let [v-ns (doto (ns-name (:ns (meta v)))
+                    require)]
+         (ns-resolve (find-ns v-ns)
+                     (:name (meta v))))
+
+       :cljs
+       v)
 
     v))
 
