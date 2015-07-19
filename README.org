@@ -118,13 +118,13 @@ some signal to 'stop the system'!
 
 *** The full story:
 
-That's where Yo-yo comes in - there's a function called =run-system!=,
+That's where Yo-yo comes in - there's a function called =run-system=,
 which you can call as follows:
 
 #+BEGIN_SRC clojure
   (:require [yoyo])
 
-  (yoyo/run-system!
+  (yoyo/run-system
    (fn [latch]
      (with-db-pool {...}
        (fn [db-pool]
@@ -137,9 +137,9 @@ which you can call as follows:
 What's happening here?
 
 - When the system starts (when your code calls =(latch)=),
-  =run-system!= returns a promise.
-- =deliver= any value to that promise, =(latch)= will return, and your
-  system will stop.
+  =run-system= returns a function.
+- Call that function, =(latch)= will return, and your system will
+  stop.
 
 **** Introducing 'ylet'
 
@@ -151,7 +151,7 @@ Enter =ylet=, a macro to simplify the nested callbacks:
 #+BEGIN_SRC clojure
   (:require [yoyo :refer [ylet]])
 
-  (yoyo/run-system!
+  (yoyo/run-system
    (fn [latch]
      (ylet [db-pool (with-db-pool {...})
             web-server (with-web-server {:handler (make-handler {:db-pool db-pool})
@@ -172,7 +172,7 @@ Similarly to Clojure's =for=, you can also 'break out' of the =ylet=
 semantics in the bindings, by passing =:let [...]=:
 
 #+BEGIN_SRC clojure
-  (yoyo/run-system!
+  (yoyo/run-system
    (fn [latch]
      (ylet [db-pool (with-db-pool {...})
             :let [server-opts {:handler (make-handler {:db-pool db-pool})

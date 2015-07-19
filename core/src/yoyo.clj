@@ -8,25 +8,13 @@
 
 (defonce ^:private !system-fn (atom nil))
 (defonce ^:private !latch (atom nil))
-
-(defn set-system-fn!
-  "Sets the Yo-yo system function (a namespace-qualified symbol), to be used with `start!`, `stop!`
-  and `reload!`.
-
-  Usage: `(set-system-fn! 'myapp.main/make-system)`"
-
-  [system-fn]
-
-  (reset! !system-fn system-fn))
-
-(defn run-system!
+(defn run-system
   "Runs the given system, in a new thread, passing it a promise latch.
 
   The function should start the system, call the latch function, and
   then stop, closing any necessary resources.
 
-  Returns a promise - deliver any value to this promise to stop the
-  system."
+  Returns a function - call the function to stop the system."
 
   [f]
 
@@ -36,23 +24,26 @@
                 (log/info "Started system.")
                 (deliver started-promise ::success)
 
-                (deref latch-promise)
+                @latch-promise
 
-                (log/info "Stopping system..."))]
-    (future
-      (log/info "Starting system...")
+                (log/info "Stopping system..."))
 
-      (try
-        (f latch)
-        (catch Throwable e
-          (deliver started-promise e))
+        !system-result (future
+                         (log/info "Starting system...")
 
-        (finally
-          (log/info "Stopped system."))))
+                         (try
+                           (f latch)
+                           (catch Throwable e
+                             (deliver started-promise e))
+
+                           (finally
+                             (log/info "Stopped system."))))]
 
     (let [started-result @started-promise]
       (if (= ::success started-result)
-        latch-promise
+        (fn []
+          (deliver latch-promise nil)
+          @!system-result)
         (throw started-result)))))
 
 (defn- do-start! []
@@ -87,13 +78,14 @@
 
 (defn stop!
   "Stops the currently running Yo-yo system, if there is one, no-op if
-  no system is currently running."
+  no system is currently running.
+
+  Returns the return value of the system."
   []
+
   (let [latch (m/deref-reset! !latch nil)]
     (when latch
-      (deliver latch :stop!))
-
-    (boolean latch)))
+      (latch))))
 
 (defn reload!
   "Reloads a Yo-yo system by stopping and restarting it.
