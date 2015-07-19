@@ -1,73 +1,27 @@
 (ns ^{:clojure.tools.namespace.repl/load false
       :clojure.tools.namespace.repl/unload false}
   yoyo
-  (:require [medley.core :as m]
-
+  (:require [yoyo.core :as yc]
+            [medley.core :as m]
             #?@(:clj
-                [[clojure.tools.namespace.repl :as ctn]
-                 [clojure.tools.logging :as log]])))
-
-(defn log [msg]
-  (#?(:clj
-      log/info
-
-      :cljs
-      js/console.info)
-
-     msg))
-
-(defn run-system
-  "Runs the given system, in a new thread, passing it a promise latch.
-
-  The function should start the system, call the latch function, and
-  then stop, closing any necessary resources.
-
-  Returns a function - call the function to stop the system."
-
-  [f]
-
-  (let [latch-promise (promise)
-        started-promise (promise)
-        latch (fn [& _]
-                (log "Started system.")
-                (deliver started-promise ::success)
-
-                @latch-promise
-
-                (log "Stopping system..."))
-
-        !system-result (future
-                         (log "Starting system...")
-
-                         (try
-                           (f latch)
-                           (catch Throwable e
-                             (deliver started-promise e))
-
-                           (finally
-                             (log "Stopped system."))))]
-
-    (let [started-result @started-promise]
-      (if (= ::success started-result)
-        (fn []
-          (deliver latch-promise nil)
-          @!system-result)
-        (throw started-result)))))
+                [[clojure.tools.namespace.repl :as ctn]])))
 
 (defonce ^:private !system-fn (atom nil))
 (defonce ^:private !latch (atom nil))
 
-(defn reresolve [v]
+(defn- reresolve [v]
   (if (var? v)
-    #?(:clj
-       (let [v-ns (doto (ns-name (:ns (meta v)))
-                    require)]
-         (ns-resolve (find-ns v-ns)
-                     (:name (meta v))))
+    (fn [& args]
+      (apply #?(:clj
+                (let [v-ns (doto (ns-name (:ns (meta v)))
+                             require)]
+                  (ns-resolve (find-ns v-ns)
+                              (:name (meta v))))
 
-       :cljs
-       v)
+                :cljs
+                v)
 
+             args))
     v))
 
 (defn set-system-fn!
@@ -85,9 +39,9 @@
     (fn [latch]
       (let [reresolved-system-fn (reresolve system-fn)
             system-result (reresolved-system-fn @!previous-system
-                                                (comp latch
-                                                      #(do (reset! !previous-system nil)
-                                                           %&)))]
+                                                (fn [& args]
+                                                  (reset! !previous-system nil)
+                                                  (apply latch args)))]
         (reset! !previous-system system-result)
         system-result))))
 
@@ -99,7 +53,7 @@
   (assert (nil? @!latch) "System already started!")
 
   (if-let [system-fn @!system-fn]
-    (reset! !latch (run-system system-fn))
+    (reset! !latch (yc/run-system system-fn))
 
     (throw (ex-info "Please set a Yo-yo system-var!" {}))))
 
@@ -134,58 +88,3 @@
                  (throw ctn-result)))))
 
    (start!)))
-
-#?(:clj
-   (defmacro ylet
-     "Macro to simplify 'function staircases', similar to Clojure's let.
-
-  Every right-hand-side expression is expected to be short by one
-  parameter - `ylet` passes a continuation function, expecting one
-  argument (the left-hand-size binding) to the expression as its final
-  parameter.
-
-  Similarly to 'for', you can pass `:let [...]` to break out of the
-  special ylet binding behaviour, and revert to a normal set of 'let'
-  bindings.
-
-  Example:
-
-  (defn with-db-pool [opts f]
-    ...
-    (f pool)
-    ...)
-
-  (defn with-web-server [handler opts f]
-    ...
-    (f server)
-    ...)
-
-  (ylet [{:keys [...} :as db-pool} (with-db-pool db-opts)
-         :let [server-opts (read-config ...)]
-         web-server (with-web-server (make-handler {:db-pool db-pool})
-                                     server-opts)]
-    ...)
-
-  ;; gets translated to
-
-  (with-db-pool db-opts
-    (fn [{:keys [...] :as db-pool}]
-      (let [server-opts (read-config ...)]
-        (with-web-server (make-handler {:db-pool db-pool}
-                                       server-opts)
-          (fn [web-server]
-            ...)))))"
-
-     [bindings & body]
-
-     (assert (even? (count bindings)) "'ylet' must have an even number of bindings")
-
-     (if-let [[bind expr & more] (seq bindings)]
-       (if (= bind :let)
-         `(let ~expr
-            (ylet ~more ~@body))
-
-         `(~@expr (fn [~bind]
-                    (ylet ~more ~@body))))
-       `(do
-          ~@body))))
