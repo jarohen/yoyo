@@ -103,17 +103,20 @@
 (defn reload!
   "Reloads a Yo-yo system by stopping and restarting it."
   ([]
-   (reload! {:refresh? true
-             :refresh-all? false}))
+   (reload! {}))
 
-  ([{:keys [refresh? refresh-all?]}]
+  ([{:keys [refresh? refresh-all?]
+     :or {refresh? true
+          refresh-all? false}}]
    (let [system-result (stop!)]
 
      (when refresh-all?
        (ctn/clear))
 
      (when refresh?
-       (ctn/refresh))
+       (let [ctn-result (ctn/refresh)]
+         (if-not (= :ok ctn-result)
+           (throw ctn-result))))
 
      (start!))))
 
