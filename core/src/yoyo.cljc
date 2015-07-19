@@ -2,9 +2,19 @@
       :clojure.tools.namespace.repl/unload false}
   yoyo
   (:require [medley.core :as m]
-            [clojure.tools.namespace.repl :as ctn]
-            [clojure.tools.logging :as log]
-            [clojure.test]))
+
+            #?@(:clj
+                [[clojure.tools.namespace.repl :as ctn]
+                 [clojure.tools.logging :as log]])))
+
+(defn log [msg]
+  (#?(:clj
+      log/info
+
+      :cljs
+      js/console.info)
+
+     msg))
 
 (defn run-system
   "Runs the given system, in a new thread, passing it a promise latch.
@@ -19,15 +29,15 @@
   (let [latch-promise (promise)
         started-promise (promise)
         latch (fn [& _]
-                (log/info "Started system.")
+                (log "Started system.")
                 (deliver started-promise ::success)
 
                 @latch-promise
 
-                (log/info "Stopping system..."))
+                (log "Stopping system..."))
 
         !system-result (future
-                         (log/info "Starting system...")
+                         (log "Starting system...")
 
                          (try
                            (f latch)
@@ -35,7 +45,7 @@
                              (deliver started-promise e))
 
                            (finally
-                             (log/info "Stopped system."))))]
+                             (log "Stopped system."))))]
 
     (let [started-result @started-promise]
       (if (= ::success started-result)
@@ -108,20 +118,22 @@
   ([{:keys [refresh? refresh-all?]
      :or {refresh? true
           refresh-all? false}}]
-   (let [system-result (stop!)]
 
-     (when refresh-all?
-       (ctn/clear))
+   (stop!)
 
-     (when refresh?
-       (let [ctn-result (ctn/refresh)]
-         (if-not (= :ok ctn-result)
-           (throw ctn-result))))
+   (when refresh-all?
+     #?(:clj (ctn/clear)))
 
-     (start!))))
+   (when refresh?
+     #?(:clj (let [ctn-result (ctn/refresh)]
+               (if-not (= :ok ctn-result)
+                 (throw ctn-result)))))
 
-(defmacro ylet
-  "Macro to simplify 'function staircases', similar to Clojure's let.
+   (start!)))
+
+#?(:clj
+   (defmacro ylet
+     "Macro to simplify 'function staircases', similar to Clojure's let.
 
   Every right-hand-side expression is expected to be short by one
   parameter - `ylet` passes a continuation function, expecting one
@@ -158,19 +170,18 @@
         (with-web-server (make-handler {:db-pool db-pool}
                                        server-opts)
           (fn [web-server]
-            ...)))))
-    "
+            ...)))))"
 
-  [bindings & body]
+     [bindings & body]
 
-  (assert (even? (count bindings)) "'ylet' must have an even number of bindings")
+     (assert (even? (count bindings)) "'ylet' must have an even number of bindings")
 
-  (if-let [[bind expr & more] (seq bindings)]
-    (if (= bind :let)
-      `(let ~expr
-         (ylet ~more ~@body))
+     (if-let [[bind expr & more] (seq bindings)]
+       (if (= bind :let)
+         `(let ~expr
+            (ylet ~more ~@body))
 
-      `(~@expr (fn [~bind]
-                 (ylet ~more ~@body))))
-    `(do
-       ~@body)))
+         `(~@expr (fn [~bind]
+                    (ylet ~more ~@body))))
+       `(do
+          ~@body))))
