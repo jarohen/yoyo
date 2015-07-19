@@ -66,6 +66,16 @@
 
   (reset! !system-fn (comp reresolve system-fn)))
 
+(defn preserving-previous-system [system-fn]
+  (let [!previous-system (atom nil)]
+    (fn [latch]
+      (let [reresolved-system-fn (reresolve system-fn)
+            system-result (reresolved-system-fn @!previous-system
+                                                (comp latch
+                                                      #(do (reset! !previous-system nil)
+                                                           %&)))]
+        (reset! !previous-system system-result)
+        system-result))))
 
 (defn start!
   "Starts the Yo-yo system, calling the function set by
