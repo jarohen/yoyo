@@ -10,9 +10,9 @@
 
                                   server-opts)]
     (log/info "Started web server.")
-    (try
-      (f server)
-      (finally
-        (log/info "Stopping web server...")
-        (.close server)
-        (log/info "Stopped web server.")))))
+
+    (f server
+       (fn []
+         (log/info "Stopping web server...")
+         (.close server)
+         (log/info "Stopped web server.")))))

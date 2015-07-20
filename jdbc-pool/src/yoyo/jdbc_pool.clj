@@ -21,8 +21,11 @@
                             (.setPassword password)
                             (cond-> max-total (.setMaxTotal max-total))
                             (cond-> max-idle (.setMaxIdle max-idle)))}]
-    (try
-      (f pool)
 
-      (finally
-        (.close (:datasource pool))))))
+    (log/info "Started JDBC pool.")
+
+    (f pool
+       (fn []
+         (log/info "Stopping JDBC pool...")
+         (.close (:datasource pool))
+         (log/info "Stopped JDBC pool...")))))

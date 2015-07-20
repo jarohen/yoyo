@@ -23,7 +23,7 @@ system, based on [[http://commons.apache.org/proper/commons-dbcp/][Apache Common
                              :db "..."
                              :max-total 8
                              :max-idle 8}}
-    (fn [db-pool]
+    (fn [db-pool stop!]
       ...
       ))
 #+END_SRC

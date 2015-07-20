@@ -9,7 +9,8 @@
 ** Usage
 
 #+BEGIN_SRC clojure
-  (:require [yoyo.http-kit :as http])
+  (:require [yoyo.http-kit :as http]
+            [yoyo.core :as yc])
 
   (defn make-handler [...]
     (routes
@@ -19,11 +20,12 @@
   ;; when you're making your system:
 
   (defn make-system [latch]
-    (...
-     (fn [...]
-       (http/with-web-server {:handler (make-handler ...)
-                              :server-opts {:port ...
-                                            ...}} ; anything else you'd pass to org.httpkit.server/run-server
-         (fn [server]
-           ...)))))
+    (yc/ylet [...
+              server (http/with-server {:handler (make-handler ...)
+                                        :server-opts {:port ...
+                                                      ...}}) ; anything else you'd pass to org.httpkit.server/run-server
+              ...]
+      ...))
+
+
 #+END_SRC

@@ -10,9 +10,8 @@
 
                                       server-opts)]
     (log/info "Started web server.")
-    (try
-      (f http-kit-opts)
-      (finally
-        (log/info "Stopping web server...")
-        (stop-server!)
-        (log/info "Stopped web server.")))))
+    (f http-kit-opts
+       (fn []
+         (log/info "Stopping web server...")
+         (stop-server!)
+         (log/info "Stopped web server.")))))

@@ -138,10 +138,10 @@
 (defn with-cljs-compiler [{:keys [cljs-opts]} f]
   (if-not (pre-built? cljs-opts)
     (let [latch-ch (a/chan)]
-      (try
-        (f (watch-cljs! cljs-opts latch-ch))
+      (f (watch-cljs! cljs-opts latch-ch)
 
-        (finally
-          (a/close! latch-ch))))
+         (fn []
+           (a/close! latch-ch))))
 
-    (f (pre-built-cljs-compiler cljs-opts))))
+    (f (pre-built-cljs-compiler cljs-opts)
+       (fn []))))

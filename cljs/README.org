@@ -32,7 +32,7 @@ In your system:
                                    :build {:optimizations :advanced
                                            :pretty-print? false
                                            :classpath-prefix "js"}}}
-    (fn [cljs-compiler]
+    (fn [cljs-compiler stop!]
       ...))
 #+END_SRC
 
