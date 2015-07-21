@@ -94,11 +94,3 @@
                             (ylet ~more ~@body)))))
 
             `(result (do ~@body)))))
-
-(-> (with-db-pool db-opts)
-    (chain (fn [{:keys [...] :as db-pool}]
-             (let [server-opts (read-config ...)]
-               (-> (with-web-server (make-handler {:db-pool db-pool}
-                                                  server-opts))
-                   (chain (fn [web-server]
-                            ...)))))))

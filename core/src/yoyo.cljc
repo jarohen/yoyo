@@ -2,6 +2,7 @@
       :clojure.tools.namespace.repl/unload false}
   yoyo
   (:require [yoyo.core :as yc]
+            [yoyo.reresolve :as yr]
             [medley.core :as m]
             #?@(:clj
                 [[clojure.tools.namespace.repl :as ctn]])))
@@ -9,41 +10,19 @@
 (defonce ^:private !system-fn (atom nil))
 (defonce ^:private !latch (atom nil))
 
-(defn- reresolve [v]
-  (if (var? v)
-    (fn [& args]
-      (apply #?(:clj
-                (let [v-ns (doto (ns-name (:ns (meta v)))
-                             require)]
-                  (ns-resolve (find-ns v-ns)
-                              (:name (meta v))))
-
-                :cljs
-                v)
-
-             args))
-    v))
-
 (defn set-system-fn!
   "Sets the Yo-yo system fn, to be used with `start!`, `stop!` and
   `reload!`.
 
-  Usage: `(set-system-fn! #'make-system)`"
+  Can be passed a function, a var, or a fully-qualified symbol.
+
+  Usage: `(set-system-fn! 'myapp.main/make-system)`
+         `(set-system-fn! #'make-system)`
+         `(set-system-fn! make-system)`"
 
   [system-fn]
 
-  (reset! !system-fn (comp reresolve system-fn)))
-
-(defn preserving-previous-system [system-fn]
-  (let [!previous-system (atom nil)]
-    (fn [latch]
-      (let [reresolved-system-fn (reresolve system-fn)
-            system-result (reresolved-system-fn @!previous-system
-                                                (fn [& args]
-                                                  (reset! !previous-system nil)
-                                                  (apply latch args)))]
-        (reset! !previous-system system-result)
-        system-result))))
+  (reset! !system-fn (yr/with-reresolve system-fn)))
 
 (defn start!
   "Starts the Yo-yo system, calling the function set by
@@ -53,7 +32,7 @@
   (assert (nil? @!latch) "System already started!")
 
   (if-let [system-fn @!system-fn]
-    (reset! !latch (yc/run-system system-fn))
+    (boolean (reset! !latch (yc/run-system system-fn)))
 
     (throw (ex-info "Please set a Yo-yo system-var!" {}))))
 
