@@ -56,15 +56,19 @@
 
   Example:
 
-  (defn with-db-pool [opts f]
-    ...
-    (f pool)
-    ...)
+  (defn with-db-pool [opts]
+    (fn [f]
+      ...
+      (f pool
+         (fn []
+           ...))))
 
-  (defn with-web-server [handler opts f]
-    ...
-    (f server)
-    ...)
+  (defn with-web-server [handler opts]
+    (fn [f]
+      ...
+      (f server
+         (fn []
+           ...))))
 
   (ylet [{:keys [...} :as db-pool} (with-db-pool db-opts)
          :let [server-opts (read-config ...)]

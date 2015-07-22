@@ -10,22 +10,23 @@
    "sqlite" "org.sqlite.JDBC"
    "h2" "org.h2.Driver"})
 
-(defn with-db-pool [{{:keys [driver subprotocol host port username password db max-total max-idle]} :db-config} f]
-  (log/info "Starting JDBC pool...")
+(defn with-db-pool [{{:keys [driver subprotocol host port username password db max-total max-idle]} :db-config}]
+  (fn [f]
+    (log/info "Starting JDBC pool...")
 
-  (let [pool {:datasource (doto (BasicDataSource.)
-                            (.setDriverClassName (or driver (get known-drivers subprotocol)))
-                            (.setAccessToUnderlyingConnectionAllowed true)
-                            (.setUrl (format "jdbc:%s://%s:%s/%s" subprotocol host port db))
-                            (.setUsername username)
-                            (.setPassword password)
-                            (cond-> max-total (.setMaxTotal max-total))
-                            (cond-> max-idle (.setMaxIdle max-idle)))}]
+    (let [pool {:datasource (doto (BasicDataSource.)
+                              (.setDriverClassName (or driver (get known-drivers subprotocol)))
+                              (.setAccessToUnderlyingConnectionAllowed true)
+                              (.setUrl (format "jdbc:%s://%s:%s/%s" subprotocol host port db))
+                              (.setUsername username)
+                              (.setPassword password)
+                              (cond-> max-total (.setMaxTotal max-total))
+                              (cond-> max-idle (.setMaxIdle max-idle)))}]
 
-    (log/info "Started JDBC pool.")
+      (log/info "Started JDBC pool.")
 
-    (f pool
-       (fn []
-         (log/info "Stopping JDBC pool...")
-         (.close (:datasource pool))
-         (log/info "Stopped JDBC pool...")))))
+      (f pool
+         (fn []
+           (log/info "Stopping JDBC pool...")
+           (.close (:datasource pool))
+           (log/info "Stopped JDBC pool..."))))))

@@ -16,12 +16,13 @@ Yo-yo system.
 For an individual Component:
 
 #+BEGIN_SRC clojure
-  (:require [yoyo.component :as yc])
+  (:require [yoyo.component :refer [with-component]]
+            [yoyo.core :as yc])
 
-  (yc/with-component (map->MyComponent {...})
-    (fn [started-component]
-      ;; next turtle
-      ))
+  (yc/ylet [...
+            started-component (with-component (map->MyComponent {...}))
+            ...]
+    ...)
 #+END_SRC
 
 The component will be started before being passed to this function,
@@ -30,14 +31,14 @@ and stopped afterwards.
 For a whole system:
 
 #+BEGIN_SRC clojure
-  (:require [yoyo.component :as yc]
+  (:require [yoyo.component :refer [with-component-system]]
+            [yoyo.core :as yc]
             [com.stuartsierra.component :as c])
 
-  (yc/with-component-system (c/system-map
-                              ...)
-    (fn [started-system]
-      ;; next turtle
-      ))
+  (yc/ylet [...
+            started-system (with-component-system (c/system-map ...))
+            ...]
+    ...)
 #+END_SRC
 
 Likewise, the system will be started before being passed to that
@@ -52,17 +53,17 @@ libary:
   (:require [yoyo.component :as yc]
             [com.stuartsierra.component :as c])
 
-  (defn with-db-pool [db-opts f]
-    (let [db-pool (...)]
-      (try
-        (f db-pool)
+  (defn with-db-pool [db-opts]
+    (fn [f]
+      (let [db-pool (...)]
+        (f db-pool
 
-        (finally
-          ;; stop pool
-          ))))
+           (fn []
+             ;; stop pool
+             )))))
 
   (defn make-db-pool-component [db-opts]
-    (yc/->YoyoComponent #(with-db-pool db-opts %)))
+    (yc/->YoyoComponent (with-db-pool db-opts)))
 
 
   ;; Usage:

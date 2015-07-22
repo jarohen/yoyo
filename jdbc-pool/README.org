@@ -12,20 +12,21 @@ system, based on [[http://commons.apache.org/proper/commons-dbcp/][Apache Common
 ** Usage
 
 #+BEGIN_SRC clojure
-  (:require [yoyo.jdbc-pool :refer [with-db-pool]])
+  (:require [yoyo.core :as yc]
+            [yoyo.jdbc-pool :refer [with-db-pool]])
 
-  (with-db-pool {:db-config {:driver "org.postgresql.Driver" ; optional - we'll guess it if you don't specify one!
-                             :subprotocol "postgresql"
-                             :host "..."
-                             :port 5432
-                             :username "..."
-                             :password "..."
-                             :db "..."
-                             :max-total 8
-                             :max-idle 8}}
-    (fn [db-pool stop!]
-      ...
-      ))
+  (yc/ylet [...
+            db-pool (with-db-pool {:db-config {:driver "org.postgresql.Driver" ; optional - we'll guess it if you don't specify one!
+                                               :subprotocol "postgresql"
+                                               :host "..."
+                                               :port 5432
+                                               :username "..."
+                                               :password "..."
+                                               :db "..."
+                                               :max-total 8
+                                               :max-idle 8}})
+            ...]
+    ...)
 #+END_SRC
 
 This module is currently very basic and so only accepts the options

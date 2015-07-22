@@ -15,25 +15,27 @@ Modular [[https://github.com/juxt/modular/tree/master/modules/cljs/][CLJS module
 In your system:
 
 #+BEGIN_SRC clojure
-  (:require [yoyo.cljs :refer [with-cljs-compiler]])
+  (:require [yoyo.core :as yc]
+            [yoyo.cljs :refer [with-cljs-compiler]])
 
-  (with-cljs-compiler {:cljs-opts {:source-paths #{"ui-src"}
-                                   :target-path "target/cljs/"
+  (yc/ylet [...
+            cljs-compiler (with-cljs-compiler {:cljs-opts {:source-paths #{"ui-src"}
+                                                           :target-path "target/cljs/"
 
-                                   :web-context-path "/js"
+                                                           :web-context-path "/js"
 
-                                   :main myapp.ui.app
+                                                           :main myapp.ui.app
 
-                                   :externs [...]
+                                                           :externs [...]
 
-                                   :dev {:optimizations :none
-                                         :pretty-print? true}
+                                                           :dev {:optimizations :none
+                                                                 :pretty-print? true}
 
-                                   :build {:optimizations :advanced
-                                           :pretty-print? false
-                                           :classpath-prefix "js"}}}
-    (fn [cljs-compiler stop!]
-      ...))
+                                                           :build {:optimizations :advanced
+                                                                   :pretty-print? false
+                                                                   :classpath-prefix "js"}}})
+            ...]
+    ...)
 #+END_SRC
 
 The CLJS module handles the =:output-to= and =:output-dir= etc keys

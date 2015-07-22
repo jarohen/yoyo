@@ -19,7 +19,7 @@
 
   ;; when you're making your system:
 
-  (defn make-system [latch]
+  (defn make-system []
     (yc/ylet [...
               server (http/with-server {:handler (make-handler ...)
                                         :server-opts {:port ...
