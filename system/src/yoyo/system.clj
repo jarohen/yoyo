@@ -17,38 +17,38 @@
        (into {})))
 
 (defn sort-deps [analyzed-deps]
-  (-> (reduce (fn [graph [component-key {:keys [deps]}]]
-                (reduce (fn [graph [dep-key [dep-val & _]]]
-                          (deps/depend graph component-key dep-val))
-                        (-> graph
-                            (deps/depend ::system component-key))
-                        deps))
-              (deps/graph)
-              analyzed-deps)
+  (->> (reduce (fn [graph [component-key {:keys [deps]}]]
+                 (reduce (fn [graph [dep-key [dep-val & _]]]
+                           (deps/depend graph component-key dep-val))
+                         (-> graph
+                             (deps/depend ::system component-key))
+                         deps))
+               (deps/graph)
+               analyzed-deps)
 
-      deps/topo-sort))
+       deps/topo-sort
+       (remove #{::system})))
 
 (defn make-system [system]
-  (fn [f]
-    (let [analyzed-deps (analyze-deps system)
+  (let [analyzed-deps (analyze-deps system)
+        sorted-deps (sort-deps analyzed-deps)]
 
-          system-to-run (reduce (fn [f dep-key]
-                                  (fn [app stop!]
-                                    (if-let [{:keys [component-fn deps]} (get analyzed-deps dep-key)]
-                                      ((component-fn (m/map-vals #(get-in app %) (or deps {})))
-                                       (fn [component-value stop!]
-                                         (f (assoc app dep-key component-value) stop!)))
+    (reduce (fn [f dep-key]
+              (-> f
+                  (yc/chain (fn [app]
+                              (if-let [{:keys [component-fn deps]} (get analyzed-deps dep-key)]
+                                (-> (component-fn (m/map-vals #(get-in app %) (or deps {})))
+                                    (yc/chain (fn [component-value]
+                                                (fn [f]
+                                                  (f (assoc app dep-key component-value) (fn []))))))
 
-                                      (throw (ex-info "Can't find dependency:" {:dep dep-key})))))
+                                (throw (ex-info "Can't find dependency:" {:dep dep-key})))))))
 
-                                (fn [_ stop!]
-                                  stop!)
+            (fn [f]
+              (f {}
+                 (fn [])))
 
-                                (->> analyzed-deps
-                                     sort-deps
-                                     (remove #{::system})
-                                     reverse))]
-      (system-to-run {} (fn [])))))
+            sorted-deps)))
 
 (sc/defn ^:always-validate using [component, deps :- {sc/Any [sc/Any]}]
   (-> component
@@ -100,8 +100,21 @@
                                     :c3 (-> with-c3
                                             (using {:c2 [:c2]
                                                     :c1 [:c1 :the-c1]}))})
-                      #_(with-system-put-to 'user/foo-system))]
-    (-> (system-fn (fn [running-system]
-                     (clojure.pprint/pprint running-system)
-                     (clojure.pprint/pprint (eval 'user/foo-system))
-                     (prn (= running-system (eval 'user/foo-system))))))))
+                      #_(with-system-put-to 'user/foo-system))
+
+        started-system (yc/run-system (-> system-fn
+                                          (yc/chain
+                                           (fn [running-system]
+                                             (fn [f]
+                                               (prn running-system)
+                                               #_(clojure.pprint/pprint running-system)
+                                               #_(clojure.pprint/pprint (eval 'user/foo-system))
+                                               #_(prn (= running-system (eval 'user/foo-system)))
+                                               (f nil
+                                                  (fn [])))))))
+
+        _ (println "stopping system!")]
+
+    (started-system)
+
+    ))
