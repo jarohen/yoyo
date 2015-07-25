@@ -66,11 +66,12 @@
   (-> component
       (vary-meta assoc ::deps deps)))
 
-(defn without-lifecycle [f]
-  ;; TODO
-  #_(with-meta (fn [app latch]
-                 (latch (f app)))
-      (meta f)))
+(defn without-lifecycle [component-fn]
+  (with-meta (fn [app]
+               (fn [f]
+                 (f (component-fn app)
+                    (fn []))))
+    (meta component-fn)))
 
 (defn with-system-put-to [system sym]
   ;; TODO
