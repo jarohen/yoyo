@@ -1,48 +1,60 @@
 (ns yoyo.system
   (:require [yoyo.core :as yc]
             [medley.core :as m]
-            [schema.core :as sc]
-            [com.stuartsierra.dependency :as deps]))
+            [clojure.set :as set]
+            [schema.core :as sc]))
 
-(defn- constant-value [v]
-  (fn [app f]
-    (f v)))
+(defn find-cycle [deps-map]
+  (loop [[todo & more] (map vector (keys deps-map))]
+    (when todo
+      (let [more-work (for [dep (get deps-map (last todo))]
+                        (conj todo dep))]
+        (if-let [the-cycle (->> more-work
+                                (filter #(= (first %) (last %)))
+                                first)]
+          the-cycle
+          (recur (concat more more-work)))))))
 
-(defn- analyze-deps [system]
-  (->> (for [[k v] system]
-         [k {:component-fn (if (fn? v)
-                             v
-                             (constant-value v))
-             :deps (::deps (meta v))}])
-       (into {})))
+(defn sort-deps [system]
+  (loop [topo-sorted-deps []
+         remaining-deps (->> system
+                             (m/map-vals (comp set first vals :deps))
+                             (map #(zipmap [:dep-key :deps] %)))]
+    (if (empty? remaining-deps)
+      (vec topo-sorted-deps)
 
-(defn sort-deps [analyzed-deps]
-  (->> (reduce (fn [graph [component-key {:keys [deps]}]]
-                 (reduce (fn [graph [dep-key [dep-val & _]]]
-                           (deps/depend graph component-key dep-val))
-                         (-> graph
-                             (deps/depend ::system component-key))
-                         deps))
-               (deps/graph)
-               analyzed-deps)
+      (let [with-no-more-deps (->> remaining-deps
+                                   (filter (comp empty? :deps))
+                                   (map :dep-key)
+                                   set)]
+        (if (empty? with-no-more-deps)
+          (throw (ex-info "Dependency cycle detected!"
+                          {:cycle (find-cycle (->> remaining-deps
+                                                   (map (juxt :dep-key :deps))
+                                                   (into {})))}))
 
-       deps/topo-sort
-       (remove #{::system})))
+          (recur (concat topo-sorted-deps with-no-more-deps)
+                 (->> remaining-deps
+                      (remove (comp with-no-more-deps :dep-key))
+                      (map #(update % :deps set/difference with-no-more-deps)))))))))
 
-(defn make-system [system]
-  (let [analyzed-deps (analyze-deps system)
-        sorted-deps (sort-deps analyzed-deps)]
+(defn make-system [system-map]
+  (let [system (->> system-map
+                    (m/map-vals (fn [v]
+                                  {:component-fn v
+                                   :deps (::deps (meta v))})))
+        sorted-deps (sort-deps system)]
 
     (reduce (fn [f dep-key]
-              (-> f
-                  (yc/chain (fn [app]
-                              (if-let [{:keys [component-fn deps]} (get analyzed-deps dep-key)]
+              (if-let [{:keys [component-fn deps]} (get system dep-key)]
+                (-> f
+                    (yc/chain (fn [app]
                                 (-> (component-fn (m/map-vals #(get-in app %) (or deps {})))
                                     (yc/chain (fn [component-value]
                                                 (fn [f]
-                                                  (f (assoc app dep-key component-value) (fn []))))))
+                                                  (f (assoc app dep-key component-value) (fn [])))))))))
 
-                                (throw (ex-info "Can't find dependency:" {:dep dep-key})))))))
+                (throw (ex-info "Can't find dependency:" {:dep dep-key}))))
 
             (fn [f]
               (f {}
