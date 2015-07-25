@@ -58,12 +58,13 @@
 
    (stop!)
 
-   (when refresh-all?
-     #?(:clj (ctn/clear)))
+   #?@(:clj
+       [(when refresh-all?
+          (ctn/clear))
 
-   (when refresh?
-     #?(:clj (let [ctn-result (ctn/refresh)]
-               (if-not (= :ok ctn-result)
-                 (throw ctn-result)))))
+        (when refresh?
+          (let [ctn-result (ctn/refresh)]
+            (when-not (= :ok ctn-result)
+              (throw ctn-result))))])
 
    (start!)))
