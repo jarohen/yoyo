@@ -73,18 +73,32 @@
                     (fn []))))
     (meta component-fn)))
 
-(defn with-system-put-to [system sym]
-  ;; TODO
-  #_(fn [latch]
-      (system (fn [started-system]
-                (let [the-ns (doto (symbol (namespace sym))
-                               create-ns)
-                      the-name (symbol (name sym))]
-                  (intern the-ns the-name started-system)
+(defprotocol SystemSink
+  (set-system! [_ running-system]))
 
-                  (let [result (latch started-system)]
-                    (intern the-ns the-name nil)
-                    result))))))
+(extend-protocol SystemSink
+  #?(:clj clojure.lang.Atom
+     :cljs cljs.core.Atom)
+  (set-system! [!atom running-system]
+    (reset! !atom running-system)))
+
+#?(:clj
+   (extend-protocol SystemSink
+     clojure.lang.Symbol
+     (set-system! [sym running-system]
+       (let [the-ns (doto (symbol (namespace sym))
+                      create-ns)
+             the-name (symbol (name sym))]
+         (intern the-ns the-name running-system)))))
+
+(defn with-system-put-to [system system-sink]
+  (-> system
+      (yc/chain (fn [running-system]
+                  (fn [f]
+                    (set-system! system-sink running-system)
+                    (f running-system
+                       (fn []
+                         (set-system! system-sink nil))))))))
 
 
 (comment
@@ -110,9 +124,7 @@
   (let [system-fn (-> (make-system {:c1 with-c1
                                     :c2 (-> with-c2
                                             (using {:c1 [:c1]}))
-                                    :c3 (-> with-c3
-                                            (using {:c2 [:c2]
-                                                    :c1 [:c1 :the-c1]}))})
+                                    })
                       #_(with-system-put-to 'user/foo-system))
 
         started-system (yc/run-system (-> system-fn
