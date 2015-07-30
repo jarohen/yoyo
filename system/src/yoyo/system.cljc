@@ -19,7 +19,7 @@
 (defn sort-deps [system]
   (loop [topo-sorted-deps []
          remaining-deps (->> system
-                             (m/map-vals (comp set first vals :deps))
+                             (m/map-vals (comp set #(map first %) vals :deps))
                              (map #(zipmap [:dep-key :deps] %)))]
     (if (empty? remaining-deps)
       (vec topo-sorted-deps)
