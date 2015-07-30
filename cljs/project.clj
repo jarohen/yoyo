@@ -1,4 +1,4 @@
-(defproject jarohen/yoyo.cljs "0.0.4"
+(defproject jarohen/yoyo.cljs "0.0.5-SNAPSHOT"
   :description "FIXME: write description"
   :url "https://github.com/james-henderson/yoyo"
 
