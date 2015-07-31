@@ -69,9 +69,16 @@
 
             sorted-deps)))
 
-(sc/defn ^:always-validate using [component, deps :- {sc/Any [sc/Any]}]
+(sc/defn ^:always-validate using [component, & deps :- [(sc/either {sc/Any [sc/Any]}
+                                                                   [sc/Any])]]
   (-> component
-      (vary-meta assoc ::deps deps)))
+      (vary-meta assoc
+                 ::deps (apply merge (for [dep deps]
+                                       (cond
+                                         (vector? dep) (->> (for [dep-key dep]
+                                                              [dep-key [dep-key]])
+                                                            (into {}))
+                                         (map? dep) dep))))))
 
 (defn without-lifecycle [component-fn]
   (with-meta (fn [app]
@@ -113,9 +120,8 @@
 
   (let [system-fn (-> (make-system {:c1 with-c1
                                     :c2 (-> with-c2
-                                            (using {:c1 [:c4]}))
-                                    })
-                      #_(with-system-put-to 'user/foo-system))
+                                            (using [:c1]))})
+                      (with-system-put-to 'user/foo-system))
 
         started-system (yc/run-system (-> system-fn
                                           (yc/chain
@@ -130,6 +136,6 @@
 
         _ (println "stopping system!")]
 
-    (started-system)
+    (started-system))
 
-    ))
+  )
