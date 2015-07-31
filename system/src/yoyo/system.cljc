@@ -5,6 +5,13 @@
             [clojure.set :as set]
             [schema.core :as sc]))
 
+(defn verify-deps [system-map]
+  (doseq [[component-key {:keys [deps]}] system-map
+          [_ [dep]] deps]
+    (when-not (contains? system-map dep)
+      (throw (ex-info "Missing dependency!" {:dependency dep
+                                             :dependent component-key})))))
+
 (defn find-cycle [deps-map]
   (loop [[todo & more] (map vector (keys deps-map))]
     (when todo
@@ -40,22 +47,21 @@
                       (map #(update % :deps set/difference with-no-more-deps)))))))))
 
 (defn make-system [system-map]
-  (let [system (->> system-map
-                    (m/map-vals (fn [v]
-                                  {:component-fn v
-                                   :deps (::deps (meta v))})))
+  (let [system (-> system-map
+                   (->> (m/map-vals (fn [v]
+                                      {:component-fn v
+                                       :deps (::deps (meta v))})))
+                   (doto verify-deps))
         sorted-deps (sort-deps system)]
 
     (reduce (fn [f dep-key]
-              (if-let [{:keys [component-fn deps]} (get system dep-key)]
-                (-> f
-                    (yc/chain (fn [app]
+              (-> f
+                  (yc/chain (fn [app]
+                              (let [{:keys [component-fn deps]} (get system dep-key)]
                                 (-> (component-fn (m/map-vals #(get-in app %) (or deps {})))
                                     (yc/chain (fn [component-value]
                                                 (fn [f]
-                                                  (f (assoc app dep-key component-value) (fn [])))))))))
-
-                (throw (ex-info "Can't find dependency:" {:dep dep-key}))))
+                                                  (f (assoc app dep-key component-value) (fn [])))))))))))
 
             (fn [f]
               (f {}
@@ -107,7 +113,7 @@
 
   (let [system-fn (-> (make-system {:c1 with-c1
                                     :c2 (-> with-c2
-                                            (using {:c1 [:c1]}))
+                                            (using {:c1 [:c4]}))
                                     })
                       #_(with-system-put-to 'user/foo-system))
 
