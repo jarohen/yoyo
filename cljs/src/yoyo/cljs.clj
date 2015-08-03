@@ -78,6 +78,12 @@
 
      (.getPath (io/file output-dir "mains")))))
 
+(defn wrap-no-cache [handler]
+  (fn [req]
+    (when-let [resp (handler req)]
+      (-> resp
+          (assoc-in [:headers "cache-control"] "no-cache")))))
+
 (defn watch-cljs! [{:keys [source-paths] :as cljs-opts} latch-ch]
   (assert-cljs
    (let [{file-change-ch :out-ch, file-watch-latch-ch :latch-ch} (watch/watch-files! source-paths)
@@ -103,7 +109,8 @@
 
      (reify CLJSCompiler
        (bidi-routes [_]
-         [web-context-path (br/files {:dir (.getPath (io/file target-path (name :dev)))})])
+         [web-context-path (-> (br/files {:dir (.getPath (io/file target-path (name :dev)))})
+                               (br/wrap-middleware wrap-no-cache))])
 
        (cljs-handler [this]
          (br/make-handler (bidi-routes this)))
@@ -119,7 +126,8 @@
 
   (reify CLJSCompiler
     (bidi-routes [_]
-      [web-context-path (br/resources {:prefix (get-in cljs-opts [:build :classpath-prefix])})])
+      [web-context-path (-> (br/resources {:prefix (get-in cljs-opts [:build :classpath-prefix])})
+                            (br/wrap-middleware wrap-no-cache))])
 
     (cljs-handler [this]
       (br/make-handler (bidi-routes this)))
