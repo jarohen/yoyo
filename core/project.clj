@@ -8,6 +8,7 @@
 
                  [medley "0.6.0"]
                  [org.clojure/tools.namespace "0.2.11"]
-                 [org.clojure/tools.logging "0.3.1"]]
+                 [org.clojure/tools.logging "0.3.1"]
+                 [funcool/cats "0.6.1"]]
 
   :exclusions [org.clojure/clojure])

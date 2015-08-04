@@ -1,100 +1,94 @@
 (ns yoyo.core
-  (:require #?(:clj [clojure.tools.logging :as log])))
+  (:require #?(:clj [clojure.tools.logging :as log])
+            [cats.core :as c]
+            [cats.protocols :as cp]))
 
-(defn chain [component cont]
-  (fn [f]
-    (component (fn [outer-component outer-stop!]
-                 (try
-                   (let [start-inner! (cont outer-component)]
-                     (start-inner! (fn [inner-component inner-stop!]
-                                     (f inner-component
-                                        (fn []
-                                          (try
-                                            (inner-stop!)
-                                            (finally
-                                              (outer-stop!))))))))
-                   (catch Exception e
-                     (outer-stop!)
-                     (throw e)))))))
+(declare component-monad)
 
-(defn result [v]
-  (fn [f]
-    (f v (constantly v))))
+(defprotocol ISystem
+  (stop! [_]))
 
-(defn run-system [system]
+(defrecord YoyoSystem [v stop-fn]
+  ISystem
+  (stop! [_]
+    (when stop-fn
+      (stop-fn))
+    v)
 
-  (letfn [(log [msg]
-            (#?(:clj
-                log/info
+  cp/Context
+  (get-context [_]
+    component-monad)
 
-                :cljs
-                js/console.info)
+  clojure.lang.IDeref
+  (deref [_]
+    v))
 
-               msg))]
+(alter-meta! #'map->YoyoSystem assoc :private true)
+(alter-meta! #'->YoyoSystem assoc :private true)
+(alter-meta! #'ISystem assoc :private true)
 
-    (log "Starting system...")
+(defmethod print-method YoyoSystem [{:keys [v]} w]
+  (.write w (format "#yoyo/system %s" (pr-str v))))
 
-    (system (fn [c stop!]
-              (log "Started system.")
+(defn ->component
+  ([v]
+   (->component v nil))
 
-              (fn []
-                (log "Stopping system...")
+  ([v stop-fn]
+   (->YoyoSystem v stop-fn)))
 
-                (let [result (stop!)]
-                  (log "Stopped system.")
-                  result))))))
+(defn with-system [system f]
+  (let [res (f system)]
+    (stop! system)
+    res))
 
-#?(:clj (defmacro ylet
-          "Macro to simplify 'function staircases', similar to Clojure's let.
+(def component-monad
+  (reify
+    cp/Functor
+    (fmap [_ f {outer-v :v, outer-stop-fn :stop-fn}]
+      (->component (f outer-v) outer-stop-fn))
 
-  Every right-hand-side expression is expected to be a component - a
-  function expecting the continuation parameter.
+    cp/Monad
+    (mreturn [_ v]
+      (->component v))
 
-  Similarly to 'for', you can pass `:let [...]` to break out of the
-  special ylet binding behaviour, and revert to a normal set of 'let'
-  bindings.
+    (mbind [_ {outer-v :v, outer-stop-fn :stop-fn} f]
+      (let [{inner-v :v, inner-stop-fn :stop-fn} (try
+                                                   (f outer-v)
+                                                   (catch Throwable t
+                                                     (try
+                                                       (when outer-stop-fn
+                                                         (outer-stop-fn))
 
-  Example:
+                                                       (finally
+                                                         (throw t)))))]
+        (->component inner-v
+                     (fn []
+                       (try
+                         (when inner-stop-fn
+                           (inner-stop-fn))
 
-  (defn with-db-pool [opts]
-    (fn [f]
-      ...
-      (f pool
-         (fn []
-           ...))))
+                         (finally
+                           (when outer-stop-fn
+                             (outer-stop-fn))))))))))
 
-  (defn with-web-server [handler opts]
-    (fn [f]
-      ...
-      (f server
-         (fn []
-           ...))))
+(comment
+  (defn open-db-pool []
+    (println "opening db pool...")
+    (->component :db-pool
+                 (fn []
+                   (println "closing db pool!"))))
 
-  (ylet [{:keys [...} :as db-pool} (with-db-pool db-opts)
-         :let [server-opts (read-config ...)]
-         web-server (with-web-server (make-handler {:db-pool db-pool})
-                                     server-opts)]
-    ...)
+  (defn open-server [db-pool]
+    (println "got db pool:" db-pool)
+    (->component :server
+                 (fn []
+                   (println "closing server!"))))
 
-  ;; gets translated to
-
-  (-> (with-db-pool db-opts)
-      (chain (fn [{:keys [...] :as db-pool}]
-               (let [server-opts (read-config ...)]
-                 (-> (with-web-server (make-handler {:db-pool db-pool}
-                                                    server-opts))
-                     (chain (fn [web-server]
-                              ...)))))))"
-          [bindings & body]
-
-
-          (if-let [[bind expr & more] (seq bindings)]
-            (if (= bind :let)
-              `(let ~expr
-                 (ylet ~more ~@body))
-
-              `(-> ~expr
-                   (chain (fn [~bind]
-                            (ylet ~more ~@body)))))
-
-            `(result (do ~@body)))))
+  (with-system (c/mlet [db-pool (open-db-pool)
+                        web-server (open-server db-pool)]
+                 (c/return {:db-pool db-pool
+                            :web-server web-server}))
+    (fn [system]
+      (println "started:" (pr-str system))
+      @system)))
