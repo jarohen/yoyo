@@ -6,11 +6,11 @@
 
 (declare component-monad)
 
-(defprotocol ISystem
+(defprotocol IComponent
   (stop! [_]))
 
-(defrecord YoyoSystem [v stop-fn]
-  ISystem
+(defrecord YoyoComponent [v stop-fn]
+  IComponent
   (stop! [_]
     (when stop-fn
       (stop-fn))
@@ -24,19 +24,19 @@
   (deref [_]
     v))
 
-(alter-meta! #'map->YoyoSystem assoc :private true)
-(alter-meta! #'->YoyoSystem assoc :private true)
-(alter-meta! #'ISystem assoc :private true)
+(alter-meta! #'map->YoyoComponent assoc :private true)
+(alter-meta! #'->YoyoComponent assoc :private true)
+(alter-meta! #'IComponent assoc :private true)
 
-(defmethod print-method YoyoSystem [{:keys [v]} w]
-  (.write w (format "#yoyo/system %s" (pr-str v))))
+(defmethod print-method YoyoComponent [{:keys [v]} w]
+  (.write w (format "#yoyo/component %s" (pr-str v))))
 
 (defn ->component
   ([v]
    (->component v nil))
 
   ([v stop-fn]
-   (->YoyoSystem v stop-fn)))
+   (->YoyoComponent v stop-fn)))
 
 (defn with-system [system f]
   (let [res (f system)]
