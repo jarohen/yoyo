@@ -1,7 +1,9 @@
 (ns yoyo.system
   (:require [yoyo.core :as yc]
             [medley.core :as m]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [cats.core :as c]
+            [cats.protocols :as cp]))
 
 (comment
   (defn verify-deps [system-map]
@@ -45,40 +47,91 @@
                         (remove (comp with-no-more-deps :dep-key))
                         (map #(update % :deps set/difference with-no-more-deps))))))))))
 
+(declare dependent-monad)
 
-(defn make-system [system-map]
+(defrecord ^:private Dependency [dep-id component])
+
+(defn ->dep [dep-id component]
+  (map->Dependency {:dep-id dep-id
+                    :component component}))
+
+(alter-meta! #'->Dependency assoc :private true)
+(alter-meta! #'map->Dependency assoc :private true)
+
+(defrecord Dependent [dep-keys f]
+  cp/Context
+  (get-context [_]
+    dependent-monad))
+
+(alter-meta! #'->Dependent assoc :private true)
+(alter-meta! #'map->Dependent assoc :private true)
+
+(defn make-system [dependencies]
   )
 
 (defn ask [& system-path]
-    )
+  (map->Dependent {:dep-keys #{(first system-path)}
+                   :f (fn [system]
+                        (get-in system system-path))}))
 
-(defn ->dep [key component]
-  )
+(def dependent-monad
+  (reify
+    cp/Functor
+    (fmap [_ f fv]
+      )
 
-(defn !ask []
-  )
+    cp/Monad
+    (mreturn [_ v]
+      (map->Dependent {:dep-keys #{}
+                       :f (fn [dep]
+                            v)}))
+
+    (mbind [_ {outer-deps :dep-keys, outer-f :f} f]
+      (map->Dependent {:dep-keys outer-deps
+                       :f (fn [deps]
+                            (f (outer-f deps)))}))))
+
+(defn satisfy [dependent system]
+  ((:f dependent) system))
 
 (comment
-  (require '[cats.core :as c]
-           '[cats.protocols :as cp])
+  (c/with-monad dependent-monad
+    (-> (doto (c/bind (ask :config :s)
+                      (fn [config]
+                        (doto (c/bind (ask :config :bar)
+                                      (fn [config-2]
+                                        (do (c/return {:the-config config, :the-config2 config-2}))))
+                          (prn :inner))))
+          prn)
+        (satisfy {:config {:s :foo
+                           :bar :bax}})
+        (satisfy {:config {:s :bar
+                           :bar :quux}})
+        (#((:f %) nil)))))
 
-  (defn make-c1 []
+(map->Dependent {:dep-key :config
+                 :f (fn [s]
+                      (:config s))})
+
+(comment
+  (defn m-make-c1 []
     (->dep :c1
            (yc/->component :the-c1 (fn []
                                      (println "stopping c1!")))))
 
   (defn m-make-c2 []
-    (c/mlet [c1 (ask :c1)]
-      (->dep :c2
-             (yc/->component :the-c2
-                             (fn []
-                               (println "stopping c2!"))))))
+    (->dep :c2
+           (c/mlet [c1 (ask :c1)]
+             (c/return (yc/->component :the-c2
+                                       (fn []
+                                         (println "stopping c2!")))))))
 
   (defn m-make-c3 []
-    (c/mlet [c1 (ask :c1)
-             c2 (ask :c2)]
-      (->dep :c3 :the-c3)))
+    (->dep :c3
+           (c/mlet [c1 (ask :c1)
+                    c2 (ask :c2)]
+             (c/return :the-c3))))
 
-  (make-system #{(make-c1)
+  (make-system #{(m-make-c1)
                  (m-make-c2)
                  (m-make-c3)}))
