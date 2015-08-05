@@ -1,7 +1,8 @@
 (ns yoyo.core
   (:require #?(:clj [clojure.tools.logging :as log])
             [cats.core :as c]
-            [cats.protocols :as cp]))
+            [cats.protocols :as cp]
+            [yoyo.sink :as sink]))
 
 (declare component-monad)
 
@@ -72,6 +73,13 @@
                            (when outer-stop-fn
                              (outer-stop-fn))))))))))
 
+(defn with-system-put-to [system sink]
+  (c/mlet [running-system system]
+    (sink/set-system! sink running-system)
+    (->component running-system
+                 (fn []
+                   (sink/set-system! sink nil)))))
+
 (comment
   (defn open-db-pool []
     (println "opening db pool...")
@@ -85,10 +93,11 @@
                  (fn []
                    (println "closing server!"))))
 
-  (with-system (c/mlet [db-pool (open-db-pool)
-                        web-server (open-server db-pool)]
-                 (c/return {:db-pool db-pool
-                            :web-server web-server}))
+  (with-system (-> (c/mlet [db-pool (open-db-pool)
+                            web-server (open-server db-pool)]
+                     (c/return {:db-pool db-pool
+                                :web-server web-server}))
+                   (with-system-put-to 'user/foo-system))
     (fn [system]
       (println "started:" (pr-str system))
       @system)))

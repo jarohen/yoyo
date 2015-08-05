@@ -1,6 +1,5 @@
 (ns yoyo.system
-  (:require [yoyo.system.sink :refer [set-system!]]
-            [yoyo.core :as yc]
+  (:require [yoyo.core :as yc]
             [medley.core :as m]
             [clojure.set :as set]))
 
@@ -46,10 +45,8 @@
                         (remove (comp with-no-more-deps :dep-key))
                         (map #(update % :deps set/difference with-no-more-deps))))))))))
 
-(defn make-system [system-map]
-  )
 
-(defn with-system-put-to [system system-sink]
+(defn make-system [system-map]
   )
 
 (defn ask [& system-path]
