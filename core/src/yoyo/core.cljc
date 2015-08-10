@@ -38,6 +38,11 @@
   ([v stop-fn]
    (->YoyoComponent v stop-fn)))
 
+(defn as-component [component]
+  (or (when (instance? YoyoComponent component)
+        component)
+      (->component component)))
+
 (defn with-system [system f]
   (let [res (f system)]
     (stop! system)
