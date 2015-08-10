@@ -69,14 +69,17 @@
                                                        (finally
                                                          (throw t)))))]
         (->component inner-v
-                     (fn []
-                       (try
-                         (when inner-stop-fn
-                           (inner-stop-fn))
+                     (cond
+                       (and inner-stop-fn outer-stop-fn) (fn []
+                                                           (try
+                                                             (when inner-stop-fn
+                                                               (inner-stop-fn))
 
-                         (finally
-                           (when outer-stop-fn
-                             (outer-stop-fn))))))))))
+                                                             (finally
+                                                               (when outer-stop-fn
+                                                                 (outer-stop-fn)))))
+                       outer-stop-fn outer-stop-fn
+                       inner-stop-fn inner-stop-fn))))))
 
 (defn with-system-put-to [system sink]
   (c/mlet [running-system system]
