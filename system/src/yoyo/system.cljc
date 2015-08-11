@@ -31,7 +31,7 @@
        (into {})))
 
 (comment
-  (defn make-c1 []
+  (def make-c1
     (-> (fn [_]
           (yc/->component :the-c1
                           (fn []
@@ -39,7 +39,7 @@
         ->dep
         (named :c1)))
 
-  (defn make-c2 []
+  (def make-c2
     (-> (fn [{:keys [c1]}]
           (yc/->component :the-c2
                           (fn []
@@ -48,16 +48,35 @@
         (->dep {:using (deps :c1)})
         (named :c2)))
 
-  (defn make-c3 []
+  (def make-c3
     (-> (fn [{:keys [c1 c2]}]
           (yc/->component :the-c3))
 
         (->dep {:using (deps :c1 :c2)})
-        (named :c3))))
+        (named :c3)))
 
-#_(make-system #{(make-c1)
-                 (make-c2)
-                 (make-c3)})
+  (defn make-the-system []
+    (make-system #{make-c1
+                   make-c2
+                   make-c3})))
 
 (defn make-system [dependencies]
   )
+
+(comment
+  (def handlers
+    (-> (c/mlet [dep (ask :c1)
+                 !system !ask]
+          (c/return (->component {:store-handler (-> (fn [req]
+                                                       (c/mlet []
+                                                         (c/return (response (transform dep (get-in req [:query-params "foo"]))))))
+
+                                                     (wrap-system !system))})))
+        (named :handlers)))
+
+  (defn web-handlers []
+    (-> (fn [{dep :c1}]
+          (->component {:store-handler (fn [req]
+                                         (response (transform dep (get-in req [:query-params "foo"]))))}))
+        (->dep {:using (deps :c1)})
+        (named :handlers))))
