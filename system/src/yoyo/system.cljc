@@ -85,12 +85,18 @@
 
 (defn advance-dependencies [{:keys [components dependencies]}]
   (let [{:keys [updated?] :as advanced-system} (reduce (fn [{:keys [components dependencies updated?] :as acc}
-                                                            {:keys [dep-id], {:keys [dep-key dependent]} :dependency, :as dependency}]
+                                                            {:keys [dep-id],
+                                                             {:keys [dep-key] :as dependent} :dependent,
+                                                             :as dependency}]
+
                                                          (if (or (nil? dep-key)
                                                                  (contains? components dep-key))
 
                                                            (-> acc
-                                                               (update :dependencies conj (satisfy dependent components))
+                                                               (update :dependencies conj
+                                                                       (-> dependency
+                                                                           (update :dependent satisfy components)))
+
                                                                (assoc :updated? true))
 
                                                            (-> acc
@@ -121,10 +127,10 @@
                                   (assoc-in system [:components dep-id] started-component))
                                 (yc/as-component dependent))))
 
-              (c/fmap m-system
-                      (fn [system]
+              (c/fmap (fn [system]
                         (-> system
-                            (update :dependencies conj dependency))))))
+                            (update :dependencies conj dependency)))
+                      m-system)))
 
           m-system
 
@@ -140,8 +146,11 @@
                                                   (map #(update % :dependent as-dependent)))
                                :components {}})]
 
+    (prn m-system)
+
     (if (empty? (get-in m-system [:v :dependencies]))
       (c/fmap :components m-system)
-      (recur (-> m-system
-                 (c/fmap advance-dependencies)
-                 advance-system)))))
+
+      (recur (->> m-system
+                  (c/fmap advance-dependencies)
+                  advance-system)))))
