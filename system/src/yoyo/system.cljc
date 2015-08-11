@@ -1,82 +1,92 @@
 (ns yoyo.system
   (:require [yoyo.core :as yc]
+            [yoyo.system.protocols :as p]
             [cats.core :as c]
-            [cats.protocols :as cp]))
-
-(defrecord Dependency [id dependent])
-
-(alter-meta! #'->Dependency assoc :private true)
-(alter-meta! #'map->Dependency assoc :private true)
-
-(defrecord Dependent [component using])
-
-(alter-meta! #'->Dependent assoc :private true)
-(alter-meta! #'map->Dependent assoc :private true)
-
-(defn ->dep
-  ([component]
-   (->dep component {}))
-
-  ([component {:keys [using]}]
-   (map->Dependent {:component component
-                    :using using})))
+            [cats.protocols :as cp])
+  (:import [yoyo.system.protocols Dependent]))
 
 (defn named [dependent id]
-  (map->Dependency {:id id
-                    :dependent dependent}))
+  (p/map->Dependency {:id id
+                      :dependent dependent}))
+
+(defn ask [& path]
+  (p/map->Dependent {:dep-key (first path)
+                     :f (fn [system]
+                          (get-in system path))}))
+
+(def !ask
+  (p/map->Dependent {:dep-key ::!system
+                     :f (comp ::!system meta)}))
 
 (defn deps [& dep-ids]
   (->> dep-ids
        (map (juxt identity vector))
        (into {})))
 
+(defn ->dep [v]
+  (c/return p/dependent-monad v))
+
+(defn askm [dep-map]
+  (reduce (fn [m-system [dep-key path]]
+            (c/bind m-system
+                    (fn [system]
+                      (c/fmap (apply ask path)
+                              (fn [component]
+                                (assoc system dep-key component))))))
+
+          (->dep {})
+          dep-map))
+
+(defn run [dependent system]
+  (loop [dependent dependent]
+    (if (and dependent
+             (instance? Dependent dependent))
+
+      (let [new-system (p/satisfy dependent system)]
+        (if (= new-system system)
+          new-system
+          (recur new-system)))
+
+      dependent)))
+
+(defn wrapf
+  ([f]
+   (->> !ask
+        (c/fmap (fn [!system]
+                  (wrapf f !system)))))
+
+  ([f !system]
+   (-> (fn [& args]
+         (run (apply f args) @!system))
+
+       (with-meta (meta f)))))
+
+(defn make-system [dependencies]
+  )
+
 (comment
   (def make-c1
-    (-> (fn [_]
-          (yc/->component :the-c1
-                          (fn []
-                            (println "stopping c1!"))))
-        ->dep
+    (-> (->dep (yc/->component :the-c1
+                               (fn []
+                                 (println "stopping c1!"))))
+
         (named :c1)))
 
   (def make-c2
-    (-> (fn [{:keys [c1]}]
-          (yc/->component :the-c2
-                          (fn []
-                            (println "stopping c2!"))))
+    (-> (c/mlet [c1 (ask :c1)]
+          (->dep (yc/->component :the-c2
+                                 (fn []
+                                   (println "stopping c2!")))))
 
-        (->dep {:using (deps :c1)})
         (named :c2)))
 
   (def make-c3
-    (-> (fn [{:keys [c1 c2]}]
-          (yc/->component :the-c3))
+    (-> (c/mlet [{:keys [c1 c2]} (askm (deps :c1 :c2))]
+          (->dep (yc/->component :the-c3)))
 
-        (->dep {:using (deps :c1 :c2)})
         (named :c3)))
 
   (defn make-the-system []
     (make-system #{make-c1
                    make-c2
                    make-c3})))
-
-(defn make-system [dependencies]
-  )
-
-(comment
-  (def handlers
-    (-> (c/mlet [dep (ask :c1)
-                 !system !ask]
-          (c/return (->component {:store-handler (-> (fn [req]
-                                                       (c/mlet []
-                                                         (c/return (response (transform dep (get-in req [:query-params "foo"]))))))
-
-                                                     (wrap-system !system))})))
-        (named :handlers)))
-
-  (defn web-handlers []
-    (-> (fn [{dep :c1}]
-          (->component {:store-handler (fn [req]
-                                         (response (transform dep (get-in req [:query-params "foo"]))))}))
-        (->dep {:using (deps :c1)})
-        (named :handlers))))
