@@ -1,156 +1,63 @@
 (ns yoyo.system
   (:require [yoyo.core :as yc]
             [cats.core :as c]
-            [cats.protocols :as cp]
-            [clojure.set :as set]))
+            [cats.protocols :as cp]))
 
-(declare dependent-monad)
+(defrecord Dependency [id dependent])
 
-(defrecord NamedDependency [dep-id dependent])
+(alter-meta! #'->Dependency assoc :private true)
+(alter-meta! #'map->Dependency assoc :private true)
 
-(alter-meta! #'->NamedDependency assoc :private true)
-(alter-meta! #'map->NamedDependency assoc :private true)
-
-(defrecord Dependent [dep-key f]
-  cp/Context
-  (get-context [_]
-    dependent-monad))
+(defrecord Dependent [component using])
 
 (alter-meta! #'->Dependent assoc :private true)
 (alter-meta! #'map->Dependent assoc :private true)
 
-(defn ->dep [dep-id dependent]
-  (map->NamedDependency {:dep-id dep-id
-                         :dependent (or (when (instance? Dependent dependent)
-                                          dependent)
+(defn ->dep
+  ([component]
+   (->dep component {}))
 
-                                        (cp/mreturn dependent-monad dependent))}))
+  ([component {:keys [using]}]
+   (map->Dependent {:component component
+                    :using using})))
 
-(defn ask [& system-path]
-  (map->Dependent {:dep-key (first system-path)
-                   :f (fn [system]
-                        (get-in system system-path))}))
+(defn named [dependent id]
+  (map->Dependency {:id id
+                    :dependent dependent}))
 
-(def dependent-monad
-  (reify
-    cp/Monad
-    (mreturn [_ v]
-      (map->Dependent {:dep-key nil
-                       :f (fn [dep]
-                            v)}))
-
-    (mbind [_ {outer-dep :dep-key, outer-f :f} f]
-      (map->Dependent {:dep-key outer-dep
-                       :f (fn [outer-dep]
-                            (f (outer-f outer-dep)))}))))
-
-(defn satisfy [dependent system]
-  (c/with-monad dependent-monad
-    ((:f dependent) system)))
+(defn deps [& dep-ids]
+  (->> dep-ids
+       (map (juxt identity vector))
+       (into {})))
 
 (comment
   (defn make-c1 []
-    (->dep :c1
-           (yc/->component :the-c1
-                           (fn []
-                             (println "stopping c1!")))))
+    (-> (fn [_]
+          (yc/->component :the-c1
+                          (fn []
+                            (println "stopping c1!"))))
+        ->dep
+        (named :c1)))
 
   (defn make-c2 []
-    (->dep :c2
-           (c/mlet [c1 (ask :c1)]
-             (c/return (yc/->component :the-c2
-                                       (fn []
-                                         (println "stopping c2!")))))))
+    (-> (fn [{:keys [c1]}]
+          (yc/->component :the-c2
+                          (fn []
+                            (println "stopping c2!"))))
+
+        (->dep {:using (deps :c1)})
+        (named :c2)))
 
   (defn make-c3 []
-    (->dep :c3
-           (c/mlet [c1 (ask :c1)
-                    c2 (ask :c2)]
-             (c/return (yc/->component :the-c3))))))
+    (-> (fn [{:keys [c1 c2]}]
+          (yc/->component :the-c3))
+
+        (->dep {:using (deps :c1 :c2)})
+        (named :c3))))
 
 #_(make-system #{(make-c1)
                  (make-c2)
                  (make-c3)})
 
-
-(defn as-dependent [dependent]
-  (or (when (instance? Dependent dependent)
-        dependent)
-
-      (map->Dependent {:dep-key nil
-                       :f dependent})))
-
 (defn make-system [dependencies]
   )
-
-(defn advance-dependencies [{:keys [components dependencies]}]
-  (let [{:keys [updated?] :as advanced-system} (reduce (fn [{:keys [components dependencies updated?] :as acc}
-                                                            {:keys [dep-id],
-                                                             {:keys [dep-key] :as dependent} :dependent,
-                                                             :as dependency}]
-
-                                                         (if (or (nil? dep-key)
-                                                                 (contains? components dep-key))
-
-                                                           (-> acc
-                                                               (update :dependencies conj
-                                                                       (-> dependency
-                                                                           (update :dependent satisfy components)))
-
-                                                               (assoc :updated? true))
-
-                                                           (-> acc
-                                                               (update :dependencies conj dependency))))
-
-                                                       {:components components
-                                                        :dependencies []
-                                                        :updated? false}
-
-                                                       dependencies)]
-
-    (when-not updated?
-      (throw (ex-info "Cannot satisfy any more dependencies - is there a cycle?")
-             {:started-components (set (keys components))
-              :dependencies (->> dependencies
-                                 (map (juxt :dep-id (comp :dep-key :dependency)))
-                                 (into {}))}))
-
-    (-> advanced-system
-        (dissoc :updated?))))
-
-(defn advance-system [m-system]
-  (reduce (fn [m-system {:keys [dep-id dependent] :as dependency}]
-            (if-not (instance? Dependent dependent)
-              (c/bind m-system
-                      (fn [system]
-                        (c/fmap (fn [started-component]
-                                  (assoc-in system [:components dep-id] started-component))
-                                (yc/as-component dependent))))
-
-              (c/fmap (fn [system]
-                        (-> system
-                            (update :dependencies conj dependency)))
-                      m-system)))
-
-          m-system
-
-          (get-in m-system [:v :dependencies])))
-
-(let [dependencies #{(make-c1)
-                     (make-c2)
-                     (make-c3)}]
-  (loop [m-system (cp/mreturn yc/component-monad
-                              {:dependencies (->> dependencies
-                                                  (filter (every-pred (complement nil?)
-                                                                      #(instance? NamedDependency %)))
-                                                  (map #(update % :dependent as-dependent)))
-                               :components {}})]
-
-    (prn m-system)
-
-    (if (empty? (get-in m-system [:v :dependencies]))
-      (c/fmap :components m-system)
-
-      (recur (->> m-system
-                  (c/fmap advance-dependencies)
-                  advance-system)))))
