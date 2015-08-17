@@ -12,7 +12,7 @@
    (p/->YoyoComponent v stop-fn)))
 
 (defn with-system [system f]
-  (let [res (f system)]
+  (let [res (f (:v system))]
     (p/stop! system)
     res))
 
