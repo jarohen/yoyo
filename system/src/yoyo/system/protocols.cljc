@@ -6,32 +6,47 @@
 
 (defrecord Dependency [id dependent])
 
-(defprotocol IDependent
-  (satisfy [_ system]))
+(defprotocol Dependent
+  (dbind [_ f]))
 
-(defrecord Dependent [dep-key f]
+(defrecord ResolvedDependent [v]
   cp/Context
   (get-context [_] dependent-monad)
 
-  IDependent
-  (satisfy [dependent system]
-    (if (or (nil? dep-key)
-            (contains? system dep-key)
-            (= dep-key ::!system))
-      (f system)
-      dependent)))
+  Dependent
+  (dbind [_ f]
+    (c/with-monad dependent-monad
+      (f v))))
+
+;; Dependent a = Resolved a | Nested Key (Env -> Dependent a)
+
+(defrecord NestedDependent [dep-key f]
+  cp/Context
+  (get-context [_] dependent-monad)
+
+  Dependent
+  (dbind [_ inner-f]
+    ;; dbind :: Dependent a -> (a -> Dependent b) -> Dependent b
+    ;; inner-f :: a -> Dependent b
+    ;; f :: Env -> Dependent a
+    ;; returns :: Dependent b
+
+    (->NestedDependent dep-key
+                       (fn [system]
+                         (c/with-monad dependent-monad
+                           ;; (f system) :: Dependent a
+                           ;; (dbind (f system) inner-f) :: Dependent b
+                           (dbind (f system) inner-f))))))
 
 (def dependent-monad
   (reify
     cp/Functor
-    (cp/fmap [_ f dependent]
-      (update dependent :f #(comp f %)))
+    (cp/fmap [m f dependent]
+      (cp/mbind m dependent (comp #(cp/mreturn m %) f)))
 
     cp/Monad
     (mreturn [_ v]
-      (map->Dependency {:f (constantly v)
-                        :dep-key nil}))
+      (->ResolvedDependent v))
 
-    (mbind [_ {outer-dep :dep-key, outer-f :f} f]
-      (map->Dependent {:dep-key outer-dep
-                       :f (comp f outer-f)}))))
+    (mbind [_ dependent f]
+      (dbind dependent f))))
