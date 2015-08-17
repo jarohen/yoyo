@@ -7,7 +7,8 @@
 (defrecord Dependency [id dependent])
 
 (defprotocol Dependent
-  (dbind [_ f]))
+  (dbind [_ f])
+  (try-satisfy [_ system]))
 
 (defrecord ResolvedDependent [v]
   cp/Context
@@ -16,7 +17,10 @@
   Dependent
   (dbind [_ f]
     (c/with-monad dependent-monad
-      (f v))))
+      (f v)))
+
+  (try-satisfy [_ _]
+    v))
 
 ;; Dependent a = Resolved a | Nested Key (Env -> Dependent a)
 
@@ -36,7 +40,12 @@
                          (c/with-monad dependent-monad
                            ;; (f system) :: Dependent a
                            ;; (dbind (f system) inner-f) :: Dependent b
-                           (dbind (f system) inner-f))))))
+                           (dbind (f system) inner-f)))))
+
+  (try-satisfy [this system]
+    (if (contains? system dep-key)
+      (f system)
+      this)))
 
 (def dependent-monad
   (reify
