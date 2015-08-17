@@ -1,5 +1,6 @@
 (ns yoyo.cljs
   (:require [yoyo.cljs.file-watcher :as watch]
+            [yoyo.core :as yc]
             [bidi.ring :as br]
             [clojure.core.async :as a :refer [go-loop]]
             [clojure.java.io :as io]
@@ -143,14 +144,12 @@
     (boolean (or (io/resource (str classpath-prefix "/modules"))
                  (io/resource (str classpath-prefix "/main.js"))))))
 
-(defn with-cljs-compiler [{:keys [cljs-opts]}]
-  (fn [f]
-    (if-not (pre-built? cljs-opts)
-      (let [latch-ch (a/chan)]
-        (f (watch-cljs! cljs-opts latch-ch)
+(defn start-cljs-compiler! [cljs-opts]
+  (if-not (pre-built? cljs-opts)
+    (let [latch-ch (a/chan)]
+      (yc/->component (watch-cljs! cljs-opts latch-ch)
 
-           (fn []
-             (a/close! latch-ch))))
+                      (fn []
+                        (a/close! latch-ch))))
 
-      (f (pre-built-cljs-compiler cljs-opts)
-         (fn [])))))
+    (yc/->component (pre-built-cljs-compiler cljs-opts))))

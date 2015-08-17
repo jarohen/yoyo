@@ -9,5 +9,6 @@
 
                  [bidi "1.19.0"]
 
+                 [jarohen/yoyo "0.0.6-SNAPSHOT"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.clojure/tools.logging "0.3.1"]])

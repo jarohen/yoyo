@@ -16,25 +16,26 @@ In your system:
 
 #+BEGIN_SRC clojure
   (:require [yoyo.core :as yc]
-            [yoyo.cljs :refer [with-cljs-compiler]])
+            [yoyo.cljs :refer [with-cljs-compiler]]
+            [cats.core :as c])
 
-  (yc/ylet [...
-            cljs-compiler (with-cljs-compiler {:cljs-opts {:source-paths #{"ui-src"}
-                                                           :target-path "target/cljs/"
+  (c/mlet [...
+           cljs-compiler (start-cljs-compiler! {:source-paths #{"ui-src"}
+                                                :target-path "target/cljs/"
 
-                                                           :web-context-path "/js"
+                                                :web-context-path "/js"
 
-                                                           :main myapp.ui.app
+                                                :main myapp.ui.app
 
-                                                           :externs [...]
+                                                :externs [...]
 
-                                                           :dev {:optimizations :none
-                                                                 :pretty-print? true}
+                                                :dev {:optimizations :none
+                                                      :pretty-print? true}
 
-                                                           :build {:optimizations :advanced
-                                                                   :pretty-print? false
-                                                                   :classpath-prefix "js"}}})
-            ...]
+                                                :build {:optimizations :advanced
+                                                        :pretty-print? false
+                                                        :classpath-prefix "js"}})
+           ...]
     ...)
 #+END_SRC
 

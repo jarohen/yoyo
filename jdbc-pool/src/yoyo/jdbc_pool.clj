@@ -1,5 +1,6 @@
 (ns yoyo.jdbc-pool
-  (:require [clojure.tools.logging :as log])
+  (:require [yoyo.core :as yc]
+            [clojure.tools.logging :as log])
   (:import [org.apache.commons.dbcp2 BasicDataSource]))
 
 (def known-drivers
@@ -10,23 +11,22 @@
    "sqlite" "org.sqlite.JDBC"
    "h2" "org.h2.Driver"})
 
-(defn with-db-pool [{{:keys [driver subprotocol host port username password db max-total max-idle]} :db-config}]
-  (fn [f]
-    (log/info "Starting JDBC pool...")
+(defn open-db-pool [{:keys [driver subprotocol host port username password db max-total max-idle]}]
+  (log/info "Starting JDBC pool...")
 
-    (let [pool {:datasource (doto (BasicDataSource.)
-                              (.setDriverClassName (or driver (get known-drivers subprotocol)))
-                              (.setAccessToUnderlyingConnectionAllowed true)
-                              (.setUrl (format "jdbc:%s://%s:%s/%s" subprotocol host port db))
-                              (.setUsername username)
-                              (.setPassword password)
-                              (cond-> max-total (.setMaxTotal max-total))
-                              (cond-> max-idle (.setMaxIdle max-idle)))}]
+  (let [pool {:datasource (doto (BasicDataSource.)
+                            (.setDriverClassName (or driver (get known-drivers subprotocol)))
+                            (.setAccessToUnderlyingConnectionAllowed true)
+                            (.setUrl (format "jdbc:%s://%s:%s/%s" subprotocol host port db))
+                            (.setUsername username)
+                            (.setPassword password)
+                            (cond-> max-total (.setMaxTotal max-total))
+                            (cond-> max-idle (.setMaxIdle max-idle)))}]
 
-      (log/info "Started JDBC pool.")
+    (log/info "Started JDBC pool.")
 
-      (f pool
-         (fn []
-           (log/info "Stopping JDBC pool...")
-           (.close (:datasource pool))
-           (log/info "Stopped JDBC pool..."))))))
+    (yc/->component pool
+                    (fn []
+                      (log/info "Stopping JDBC pool...")
+                      (.close (:datasource pool))
+                      (log/info "Stopped JDBC pool...")))))
