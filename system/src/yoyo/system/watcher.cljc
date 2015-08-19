@@ -5,21 +5,24 @@
                [cljs.core.async :as a])))
 
 (defprotocol IWatcher
-  (await! [_ ch])
+  (await! [_])
   (satisfy! [_ v]))
 
 (defrecord Watcher [!chs]
   IWatcher
-  (await! [_ ch]
-    (loop []
-      (let [{:keys [chs v] :as state} @!chs]
-        (if (= v ::nil)
-          (when-not (compare-and-set! !chs state (update state :chs conj ch))
-            (recur))
+  (await! [_]
+    (let [ch (a/chan)]
+      (loop []
+        (let [{:keys [chs v] :as state} @!chs]
+          (if (= v ::nil)
+            (when-not (compare-and-set! !chs state (update state :chs conj ch))
+              (recur))
 
-          (do
-            (a/put! ch v)
-            (a/close! ch))))))
+            (do
+              (a/put! ch v)
+              (a/close! ch)))))
+
+      ch))
 
   (satisfy! [_ new-v]
     (loop []
@@ -45,11 +48,8 @@
 (comment
   (def foo-watcher (watcher))
 
-  (def foo-ch-1 (a/chan))
-  (def foo-ch-2 (a/chan))
-
-  (await! foo-watcher foo-ch-1)
-  (await! foo-watcher foo-ch-2)
+  (def foo-ch-1 (await! foo-watcher))
+  (def foo-ch-2 (await! foo-watcher))
 
   (satisfy! foo-watcher :thing)
 
