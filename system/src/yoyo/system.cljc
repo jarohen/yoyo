@@ -4,7 +4,13 @@
             [yoyo.protocols :as yp]
             [yoyo.system.protocols :as p]
             [cats.core :as c]
-            [cats.protocols :as cp])
+            [cats.protocols :as cp]
+
+            #?(:clj
+               [clojure.core.async :as a]
+               :cljs
+               [cljs.core.async :as a]))
+
   (:import [yoyo.system.protocols Dependency]))
 
 (defn ->dep [v]
@@ -75,8 +81,15 @@
 
         dependent))))
 
-(defn wrap-fn [f env]
-  )
+(defn wrap-async-run [f env]
+  ;; TODO
+  (fn [& args]
+    (a/go
+      (apply f args))))
+
+#?(:clj
+   (defn wrap-sync-run [f env]
+     (comp a/<!! (wrap-async-run f env))))
 
 (defn make-system [dependencies]
   (assert-dependencies dependencies)
