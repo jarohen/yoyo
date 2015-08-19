@@ -1,5 +1,6 @@
 (ns yoyo.system
   (:require [yoyo.core :as yc]
+            [yoyo.system.watcher :as w]
             [yoyo.protocols :as yp]
             [yoyo.system.protocols :as p]
             [cats.core :as c]
@@ -17,6 +18,9 @@
   (p/map->NestedDependent {:dep-key p
                            :f (fn [system]
                                 (->dep (get-in system (cons p path))))}))
+
+(defn ask-env []
+  (p/env-dependent))
 
 (defn- assert-dependencies [dependencies]
   (let [non-deps (remove #(instance? Dependency %) dependencies)]
@@ -46,30 +50,42 @@
             (c/bind m-system
                     (fn [system]
                       (c/fmap (fn [started-component]
+                                (w/satisfy! (get-in (meta system) [:env id]) started-component)
                                 (assoc system id started-component))
                               dependent))))
           m-system
           satisfied-dependencies))
 
 (defn run [dependent system]
-  (loop [dependent dependent]
-    (if (satisfies? p/Dependent dependent)
-      (let [satisfied-dependent (p/try-satisfy dependent system)]
-        (if (= satisfied-dependent dependent)
-          (throw (ex-info "Can't satisfy dependent..."
-                          {:dependent dependent
-                           :system system
-                           :missing (:dep-key dependent)}))
+  (let [system (-> system
+                   (assoc ::env (->> (for [[k v] system]
+                                       [k (w/watcher v)])
+                                     (into {}))))]
 
-          (recur satisfied-dependent)))
+    (loop [dependent dependent]
+      (if (satisfies? p/Dependent dependent)
+        (let [satisfied-dependent (p/try-satisfy dependent system)]
+          (if (= satisfied-dependent dependent)
+            (throw (ex-info "Can't satisfy dependent..."
+                            {:dependent dependent
+                             :system system
+                             :missing (:dep-key dependent)}))
 
-      dependent)))
+            (recur satisfied-dependent)))
+
+        dependent))))
+
+(defn wrap-fn [f env]
+  )
 
 (defn make-system [dependencies]
   (assert-dependencies dependencies)
 
   (loop [{:keys [dependencies m-system] :as acc} {:dependencies dependencies
-                                                  :m-system (yc/->component {})}]
+                                                  :m-system (yc/->component (-> {}
+                                                                                (with-meta {:env (->> (for [{:keys [id]} dependencies]
+                                                                                                        [id (w/watcher)])
+                                                                                                      (into {}))})))}]
 
     (if (empty? dependencies)
       m-system

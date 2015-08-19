@@ -22,7 +22,7 @@
   (try-satisfy [_ _]
     v))
 
-;; Dependent a = Resolved a | Nested Key (Env -> Dependent a)
+;; Dependent a = Resolved a | Nested Key (System -> Dependent a) | Env (System -> Dependent a)
 
 (defrecord NestedDependent [dep-key f]
   cp/Context
@@ -32,7 +32,7 @@
   (dbind [_ inner-f]
     ;; dbind :: Dependent a -> (a -> Dependent b) -> Dependent b
     ;; inner-f :: a -> Dependent b
-    ;; f :: Env -> Dependent a
+    ;; f :: System -> Dependent a
     ;; returns :: Dependent b
 
     (->NestedDependent dep-key
@@ -46,6 +46,23 @@
     (if (contains? system dep-key)
       (f system)
       this)))
+
+(defrecord EnvDependent [f]
+  cp/Context
+  (get-context [_] dependent-monad)
+
+  Dependent
+  (dbind [_ inner-f]
+    (->EnvDependent (fn [system]
+                      (c/with-monad dependent-monad
+                        (dbind (f system) inner-f)))))
+
+  (try-satisfy [this system]
+    (try-satisfy (f system) system)))
+
+(defn env-dependent []
+  (->EnvDependent (fn [system]
+                    (->ResolvedDependent (:env (meta system))))))
 
 (def dependent-monad
   (reify
