@@ -7,11 +7,13 @@
             [cats.protocols :as cp]
 
             #?(:clj
-               [clojure.core.async :as a]
+               [clojure.core.async :as a :refer [go-loop]]
                :cljs
                [cljs.core.async :as a]))
 
-  (:import [yoyo.system.protocols Dependency]))
+  (:import [yoyo.system.protocols Dependency])
+
+  #?(:cljs (:require-macros [cljs.core.async.macros :refer [go-loop]])))
 
 (defn ->dep [v]
   (c/return p/dependent-monad v))
@@ -58,38 +60,10 @@
                       (c/fmap (fn [started-component]
                                 (w/satisfy! (get-in (meta system) [:env id]) started-component)
                                 (assoc system id started-component))
+
                               dependent))))
           m-system
           satisfied-dependencies))
-
-(defn run [dependent system]
-  (let [system (-> system
-                   (assoc ::env (->> (for [[k v] system]
-                                       [k (w/watcher v)])
-                                     (into {}))))]
-
-    (loop [dependent dependent]
-      (if (satisfies? p/Dependent dependent)
-        (let [satisfied-dependent (p/try-satisfy dependent system)]
-          (if (= satisfied-dependent dependent)
-            (throw (ex-info "Can't satisfy dependent..."
-                            {:dependent dependent
-                             :system system
-                             :missing (:dep-key dependent)}))
-
-            (recur satisfied-dependent)))
-
-        dependent))))
-
-(defn wrap-async-run [f env]
-  ;; TODO
-  (fn [& args]
-    (a/go
-      (apply f args))))
-
-#?(:clj
-   (defn wrap-sync-run [f env]
-     (comp a/<!! (wrap-async-run f env))))
 
 (defn make-system [dependencies]
   (assert-dependencies dependencies)
@@ -114,3 +88,40 @@
 
             (recur {:dependencies (set unsatisfied)
                     :m-system (bind-system m-system satisfied)})))))))
+
+(defn run [dependent system]
+  (let [system (-> system
+                   (assoc ::env (->> (for [[k v] system]
+                                       [k (w/watcher v)])
+                                     (into {}))))]
+
+    (loop [dependent dependent]
+      (if (satisfies? p/Dependent dependent)
+        (let [satisfied-dependent (p/try-satisfy dependent system)]
+          (if (= satisfied-dependent dependent)
+            (throw (ex-info "Can't satisfy dependent..."
+                            {:dependent dependent
+                             :system system
+                             :missing (:dep-key dependent)}))
+
+            (recur satisfied-dependent)))
+
+        dependent))))
+
+(defn wrap-run-async [f env]
+  (fn [& args]
+    (go-loop [{:keys [dep-key] :as dependent} (apply f args)]
+      (if (satisfies? p/Dependent dependent)
+        (let [system (-> (if dep-key
+                           {dep-key (a/<! (w/await! (get env dep-key)))}
+                           {})
+
+                         (with-meta {:env env}))]
+
+          (recur (p/try-satisfy dependent system)))
+
+        dependent))))
+
+#?(:clj
+   (defn wrap-run [f env]
+     (comp a/<!! (wrap-run-async f env))))
