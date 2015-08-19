@@ -51,6 +51,20 @@
           m-system
           satisfied-dependencies))
 
+(defn run [dependent system]
+  (loop [dependent dependent]
+    (if (satisfies? p/Dependent dependent)
+      (let [satisfied-dependent (p/try-satisfy dependent system)]
+        (if (= satisfied-dependent dependent)
+          (throw (ex-info "Can't satisfy dependent..."
+                          {:dependent dependent
+                           :system system
+                           :missing (:dep-key dependent)}))
+
+          (recur satisfied-dependent)))
+
+      dependent)))
+
 (defn make-system [dependencies]
   (assert-dependencies dependencies)
 
@@ -105,3 +119,8 @@
     (fn [system]
       (prn "woohoo:" system (eval 'user/foo-system))
       (prn (= system (eval 'user/foo-system))))))
+
+
+;; so, threads:
+
+;;
