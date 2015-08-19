@@ -108,20 +108,45 @@
 
         dependent))))
 
-(defn wrap-run-async [f env]
-  (fn [& args]
-    (go-loop [{:keys [dep-key] :as dependent} (apply f args)]
-      (if (satisfies? p/Dependent dependent)
-        (let [system (-> (if dep-key
-                           {dep-key (a/<! (w/await! (get env dep-key)))}
-                           {})
+(defn run-env-async [dependent env]
+  (go-loop [{:keys [dep-key] :as dependent} dependent]
+    (if (satisfies? p/Dependent dependent)
+      (let [system (-> (if dep-key
+                         {dep-key (a/<! (w/await! (get env dep-key)))}
+                         {})
 
-                         (with-meta {:env env}))]
+                       (with-meta {:env env}))]
 
-          (recur (p/try-satisfy dependent system)))
+        (recur (p/try-satisfy dependent system)))
 
-        dependent))))
+      dependent)))
+
+(defn wrap-run-env-async [f env]
+  (comp #(run-env-async % env) f))
 
 #?(:clj
-   (defn wrap-run [f env]
-     (comp a/<!! (wrap-run-async f env))))
+   [(defn run-env [dependent env]
+      (a/<!! (run-env-async dependent env)))
+
+    (defn wrap-run-env [f env]
+      (comp #(run-env % env) f))])
+
+
+(comment
+  (def foo-system
+    (make-system [(-> (c/mlet [env (ask-env)]
+                        (->dep (yc/->component (future-call (fn []
+                                                              (println "here!")
+                                                              (-> (c/mlet [c1 (ask :c1)]
+                                                                    (println "got it!")
+                                                                    (Thread/sleep 2000)
+                                                                    (->dep {:my-c1 c1}))
+
+                                                                  (run-env env)))))))
+                      (named :dep))
+
+                  (-> (c/mlet [env (ask-env)]
+                        (->dep (yc/->component (do (Thread/sleep 2000) :the-c1))))
+                      (named :c1))]))
+
+  (:dep (:v foo-system)))
