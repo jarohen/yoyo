@@ -13,10 +13,10 @@
   (p/map->Dependency {:id id
                       :dependent dependent}))
 
-(defn ask [& path]
-  (p/map->NestedDependent {:dep-key (first path)
+(defn ask [p & path]
+  (p/map->NestedDependent {:dep-key p
                            :f (fn [system]
-                                (->dep (get-in system path)))}))
+                                (->dep (get-in system (cons p path))))}))
 
 (defn- assert-dependencies [dependencies]
   (let [non-deps (remove #(instance? Dependency %) dependencies)]
