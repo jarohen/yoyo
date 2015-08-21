@@ -1,57 +1,44 @@
-(ns yoyo.system.watcher
-  (:require #?(:clj
-               [clojure.core.async :as a]
-               :cljs
-               [cljs.core.async :as a])))
+(ns yoyo.system.watcher)
 
 (defprotocol IWatcher
-  (await! [_])
+  (await! [_ f])
   (satisfy! [_ v]))
 
-(defrecord Watcher [!chs]
+(defrecord Watcher [!state]
   IWatcher
-  (await! [_]
-    (let [ch (a/chan)]
-      (loop []
-        (let [{:keys [chs v] :as state} @!chs]
-          (if (= v ::nil)
-            (when-not (compare-and-set! !chs state (update state :chs conj ch))
-              (recur))
+  (await! [_ f]
+    (loop []
+      (let [{:keys [fs v] :as state} @!state]
+        (if (= v ::nil)
+          (if (compare-and-set! !state state (update state :fs conj f))
+            ::waiting
+            (recur))
 
-            (do
-              (a/put! ch v)
-              (a/close! ch)))))
-
-      ch))
+          v))))
 
   (satisfy! [_ new-v]
     (loop []
-      (let [{:keys [chs v] :as state} @!chs]
+      (let [{:keys [fs v] :as state} @!state]
         (when (= v ::nil)
-          (if (compare-and-set! !chs state (assoc state :v new-v))
-            (doseq [ch chs]
-              (a/put! ch new-v)
-              (a/close! ch))
+          (if (compare-and-set! !state state (assoc state :v new-v))
+            (doseq [f fs]
+              (f new-v))
 
-            (recur)))))))
-
-
+            (recur)))))
+    new-v))
 
 (defn watcher
   ([]
    (watcher ::nil))
 
   ([v]
-   (->Watcher (atom {:chs #{}
+   (->Watcher (atom {:fs #{}
                      :v v}))))
 
 (comment
   (def foo-watcher (watcher))
 
-  (def foo-ch-1 (await! foo-watcher))
-  (def foo-ch-2 (await! foo-watcher))
+  (await! foo-watcher #(println "I got it:" %))
+  (await! foo-watcher #(println "I got it too:" %))
 
-  (satisfy! foo-watcher :thing)
-
-
-  (a/<!! foo-ch-2))
+  (satisfy! foo-watcher :thing))

@@ -108,29 +108,43 @@
 
         dependent))))
 
+(defn- run-env* [{:keys [dep-key] :as dependent} env f]
+  (letfn [(run-env** [dependent]
+            (if (satisfies? p/Dependent dependent)
+              (if dep-key
+                (let [dep (w/await! (get env dep-key) (fn [dep]
+                                                        (run-env** (p/try-satisfy dependent
+                                                                                  (-> {dep-key dep}
+                                                                                      (with-meta {:env env}))))))]
+
+                  (when-not (= dep ::w/waiting)
+                    (recur (p/try-satisfy dependent (-> {dep-key dep} (with-meta {:env env}))))))
+
+                (recur (p/try-satisfy dependent (-> {} (with-meta {:env env})))))
+
+              (f dependent)))]
+
+    (run-env** dependent)))
+
 (defn run-env-async [dependent env]
-  (go-loop [{:keys [dep-key] :as dependent} dependent]
-    (if (satisfies? p/Dependent dependent)
-      (let [system (-> (if dep-key
-                         {dep-key (a/<! (w/await! (get env dep-key)))}
-                         {})
-
-                       (with-meta {:env env}))]
-
-        (recur (p/try-satisfy dependent system)))
-
-      dependent)))
+  (let [ch (a/chan)]
+    (run-env* dependent env (fn [v]
+                              (a/put! ch v)
+                              (a/close! ch)))
+    ch))
 
 (defn wrap-run-env-async [f env]
   (comp #(run-env-async % env) f))
 
 #?(:clj
    [(defn run-env [dependent env]
-      (a/<!! (run-env-async dependent env)))
+      (let [!v (promise)]
+        (run-env* dependent env (fn [v]
+                                  (deliver !v v)))
+        @!v))
 
     (defn wrap-run-env [f env]
       (comp #(run-env % env) f))])
-
 
 (comment
   (def foo-system
