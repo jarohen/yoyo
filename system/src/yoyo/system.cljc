@@ -147,6 +147,7 @@
       (comp #(run-env % env) f))])
 
 (comment
+  ;; TODO make-system here takes 4s, not 2s as you might expect
   (def foo-system
     (make-system [(-> (c/mlet [env (ask-env)]
                         (->dep (yc/->component (future-call (fn []
