@@ -2,21 +2,22 @@
 
 (defn with-reresolve [v]
   (cond
-    (var? v) (with-reresolve (symbol (str (ns-name (:ns (meta v))))
-                                     (str (:name (meta v)))))
+    (var? v) #?(:clj
+                (with-reresolve (symbol (str (ns-name (:ns (meta v))))
+                                        (str (:name (meta v)))))
 
-    (symbol? v) (let [v-ns (symbol (namespace v))
-                      v-name (symbol (name v))]
-                  (fn [& args]
-                    (apply #?(:clj
-                              (do
-                                (require v-ns)
-                                (ns-resolve (find-ns v-ns)
-                                            v-name))
+                :cljs v)
 
-                              :cljs
-                              v)
+    #?@(:clj [(symbol? v) (let [v-ns (symbol (namespace v))
+                                v-name (symbol (name v))]
+                            (fn [& args]
+                              (require v-ns)
 
-                           args)))
+                              (apply (or (ns-resolve (find-ns v-ns)
+                                                     v-name)
+                                         (println "uh oh!")
+                                         (throw (ex-info "Can't resolve system-fn!"
+                                                         {:sym v})))
+                                     args)))])
 
     :else v))

@@ -2,13 +2,14 @@
       :clojure.tools.namespace.repl/unload false}
   yoyo
   (:require [yoyo.core :as yc]
+            [yoyo.protocols :as yp]
             [yoyo.reresolve :as yr]
             [medley.core :as m]
             #?@(:clj
                 [[clojure.tools.namespace.repl :as ctn]])))
 
 (defonce ^:private !system-fn (atom nil))
-(defonce ^:private !latch (atom nil))
+(defonce ^:private !system (atom nil))
 
 (defn set-system-fn!
   "Sets the Yo-yo system fn, to be used with `start!`, `stop!` and
@@ -29,10 +30,14 @@
   `set-system-fn!`"
   []
 
-  (assert (nil? @!latch) "System already started!")
+  (assert (nil? @!system) "System already started!")
 
   (if-let [system-fn @!system-fn]
-    (boolean (reset! !latch (yc/run-system system-fn)))
+    (let [new-system (system-fn)]
+      (when-not (satisfies? new-system yp/IComponent)
+        (throw (ex-info "Expecting a system, got" (type new-system))))
+
+      (boolean (reset! !system new-system)))
 
     (throw (ex-info "Please set a Yo-yo system-var!" {}))))
 
@@ -43,9 +48,9 @@
   Returns the return value of the system."
   []
 
-  (let [latch (m/deref-reset! !latch nil)]
-    (when latch
-      (latch))))
+  (let [system (m/deref-reset! !system nil)]
+    (when system
+      (yp/stop! system))))
 
 (defn reload!
   "Reloads a Yo-yo system by stopping and restarting it."
