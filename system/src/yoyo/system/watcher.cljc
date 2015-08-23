@@ -2,7 +2,8 @@
 
 (defprotocol IWatcher
   (await! [_ f])
-  (satisfy! [_ v]))
+  (satisfy! [_ v])
+  (close! [_]))
 
 (defrecord Watcher [!state]
   IWatcher
@@ -25,7 +26,10 @@
               (f new-v))
 
             (recur)))))
-    new-v))
+    new-v)
+
+  (close! [watcher]
+    (satisfy! watcher ::system-not-started)))
 
 (defn watcher
   ([]
