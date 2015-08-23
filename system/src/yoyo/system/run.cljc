@@ -35,7 +35,7 @@
         (if (satisfies? p/Dependent dependent)
           (let [{:keys [dep-key]} dependent
                 throw-system-failed (fn []
-                                      (throw+ {::ys/error :system-failed
+                                      (throw+ {:yoyo.system/error :system-failed
                                                :dep-key dep-key}))]
             (recur (p/try-satisfy dependent
                                   (-> (if dep-key
@@ -44,17 +44,17 @@
                                                     (w/await! watcher (fn [dep]
                                                                         (deliver !dep-promise dep)))
 
-                                                    (throw+ {::ys/error :no-such-dependency
+                                                    (throw+ {:yoyo.system/error :no-such-dependency
                                                              :dep-key dep-key}))]
 
                                           {dep-key (case dep
                                                      ::w/waiting (let [dep @!dep-promise]
                                                                    (case dep
-                                                                     ::ys/system-failed (throw-system-failed)
+                                                                     :yoyo.system/system-failed (throw-system-failed)
 
                                                                      dep))
 
-                                                     ::ys/system-failed (throw-system-failed)
+                                                     :yoyo.system/system-failed (throw-system-failed)
 
                                                      dep)})
                                         {})
@@ -75,13 +75,13 @@
                               (let [ch (a/chan)
                                     dep (if-let [watcher (get env dep-key)]
                                           (w/await! watcher (fn [dep]
-                                                              (a/put! ch (or (#{::ys/system-failed} dep)
+                                                              (a/put! ch (or (#{:yoyo.system/system-failed} dep)
                                                                              {dep-key dep}))))
 
-                                          ::ys/no-such-dependency)]
+                                          :yoyo.system/no-such-dependency)]
 
                                 (condp contains? dep
-                                  #{::ys/system-failed ::ys/no-such-dependency} (go dep)
+                                  #{:yoyo.system/system-failed :yoyo.system/no-such-dependency} (go dep)
 
                                   #{::w/waiting} ch
 
@@ -91,7 +91,7 @@
 
                          dep (a/<! ch)]
 
-                     (or (#{::ys/system-failed ::ys/no-such-dependency} dep)
+                     (or (#{:yoyo.system/system-failed :yoyo.system/no-such-dependency} dep)
 
                          (a/<! (#?(:clj a/thread, :cljs go)
                                   (p/try-satisfy dependent
