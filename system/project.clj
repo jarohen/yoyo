@@ -5,7 +5,6 @@
                  [jarohen/yoyo "0.0.6-SNAPSHOT"]
 
                  [funcool/cats "0.6.1"]
-                 [medley "0.6.0"]
                  [slingshot "0.12.2"]
 
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]])

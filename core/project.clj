@@ -6,7 +6,7 @@
 
   :dependencies [[org.clojure/clojure "1.7.0"]
 
-                 [medley "0.6.0"]
+                 [medley "0.7.0"]
                  [org.clojure/tools.namespace "0.2.11"]
                  [org.clojure/tools.logging "0.3.1"]
                  [funcool/cats "0.6.1"]]
