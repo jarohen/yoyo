@@ -1,6 +1,7 @@
 (ns yoyo.system
   (:require [yoyo.core :as yc]
             [yoyo.system.watcher :as w]
+            [yoyo.system.run :as r]
             [yoyo.system.protocols :as p]
             [cats.core :as c])
 
@@ -70,3 +71,20 @@
           (if (not= (:dependencies @new-m-system) dependencies)
             (recur new-m-system)
             (throw (cycle-error new-m-system))))))))
+
+(defn run [dependent system]
+  (r/run dependent system))
+
+
+#?(:clj
+   [(defn run!! [dependent env]
+      (r/run!! dependent env))
+
+    (defn wrap-run!! [f env]
+      (r/wrap-run!! f env))])
+
+(defn run-async [dependent env]
+  (r/run-async dependent env))
+
+(defn wrap-run-async [f env]
+  (r/wrap-run-async f env))

@@ -29,7 +29,7 @@
     new-v)
 
   (close! [watcher]
-    (satisfy! watcher ::system-not-started)))
+    (satisfy! watcher :yoyo.system/system-failed)))
 
 (defn watcher
   ([]
