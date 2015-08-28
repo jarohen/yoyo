@@ -4,8 +4,7 @@
             [yoyo.core :as yc]
             [cats.core :as c]
             [clojure.core.async :as a]
-            [clojure.test :refer :all]
-            [slingshot.slingshot :refer [try+ throw+]]))
+            [clojure.test :refer :all]))
 
 (deftest run-test
   (is (= (run (c/mlet [c1 (ys/ask :c1)
@@ -65,13 +64,14 @@
     (yc/with-system (ys/make-system [(make-dep {:!!val !!val
                                                 :wrap-fn run!!})])
       (fn [system]
-        (try+
+        (try
           @@!!val
 
-          (throw+ :should-have-thrown)
+          (throw (ex-info "shown have thrown" {}))
 
-          (catch ys-error? {error ::ys/error}
-            (is (= error :no-such-dependency))))))))
+          (catch Exception e
+            (let [{error ::ys/error} (ex-data (.getCause e))]
+              (is (= error :no-such-dependency)))))))))
 
 (deftest runs-sync-with-error
   (let [!!val (promise)
@@ -81,18 +81,19 @@
                                   :wrap-fn run!!})
                        (make-c1 {:to-throw to-throw})])
 
-      (throw+ :should-have-thrown)
+      (throw (ex-info "should have thrown" {}))
 
       (catch Exception e
         (is (= e to-throw))))
 
-    (try+
+    (try
       @@!!val
 
-      (throw+ :should-have-thrown)
+      (throw (ex-info "should have thrown" {}))
 
-      (catch ys-error? {error ::ys/error}
-        (is (= error :system-failed))))))
+      (catch Exception e
+        (let [{error ::ys/error} (ex-data (.getCause e))]
+          (is (= error :system-failed)))))))
 
 (deftest runs-async
   (let [!!val (promise)]

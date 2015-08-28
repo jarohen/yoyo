@@ -1,7 +1,6 @@
 (ns yoyo.system.run
   (:require [yoyo.system.watcher :as w]
             [yoyo.system.protocols :as p]
-            [slingshot.slingshot :refer [throw+]]
 
             #?(:clj
                [clojure.core.async :as a :refer [go go-loop]]
@@ -35,8 +34,9 @@
         (if (satisfies? p/Dependent dependent)
           (let [{:keys [dep-key]} dependent
                 throw-system-failed (fn []
-                                      (throw+ {:yoyo.system/error :system-failed
-                                               :dep-key dep-key}))]
+                                      (throw (ex-info "The system failed to start"
+                                                      {:yoyo.system/error :system-failed
+                                                       :dep-key dep-key})))]
             (recur (p/try-satisfy dependent
                                   (-> (if dep-key
                                         (let [!dep-promise (promise)
@@ -44,8 +44,9 @@
                                                     (w/await! watcher (fn [dep]
                                                                         (deliver !dep-promise dep)))
 
-                                                    (throw+ {:yoyo.system/error :no-such-dependency
-                                                             :dep-key dep-key}))]
+                                                    (throw (ex-info "Missing dependency"
+                                                                    {:yoyo.system/error :no-such-dependency
+                                                                     :dep-key dep-key})))]
 
                                           {dep-key (case dep
                                                      ::w/waiting (let [dep @!dep-promise]
