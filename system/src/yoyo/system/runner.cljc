@@ -1,4 +1,4 @@
-(ns yoyo.system.run
+(ns yoyo.system.runner
   (:require [yoyo.system.watcher :as w]
             [yoyo.system.protocols :as p]
 

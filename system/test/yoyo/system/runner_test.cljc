@@ -1,5 +1,5 @@
-(ns yoyo.system.run-test
-  (:require [yoyo.system.run :refer :all]
+(ns yoyo.system.runner-test
+  (:require [yoyo.system.runner :refer :all]
             [yoyo.system :as ys]
             [yoyo.core :as yc]
             [cats.core :as c]

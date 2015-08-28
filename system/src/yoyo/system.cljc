@@ -1,7 +1,7 @@
 (ns yoyo.system
   (:require [yoyo.core :as yc]
             [yoyo.system.watcher :as w]
-            [yoyo.system.run :as r]
+            [yoyo.system.runner :as r]
             [yoyo.system.protocols :as p]
             [cats.core :as c]))
 
