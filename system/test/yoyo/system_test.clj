@@ -19,13 +19,15 @@
 (defn make-c2 [!events]
   (-> (fn []
         (c/mlet [c1 (ask :c1)]
-          (->dep (yc/->component (do
-                                   (swap! !events conj {:event :started-c2
-                                                        :c1 c1})
-                                   :the-c2)
+          (->dep
+           (yc/->component
+            (do
+              (swap! !events conj {:event :started-c2
+                                   :c1 c1})
+              :the-c2)
 
-                                 (fn []
-                                   (swap! !events conj :stopped-c2))))))
+            (fn []
+              (swap! !events conj :stopped-c2))))))
 
       (named :c2)))
 
@@ -37,11 +39,13 @@
           (when to-throw
             (throw to-throw))
 
-          (->dep (yc/->component (do
-                                   (swap! !events conj {:event :started-c3
-                                                        :c1 c1
-                                                        :c2 c2})
-                                   :the-c3)))))
+          (->dep
+           (yc/->component
+            (do
+              (swap! !events conj {:event :started-c3
+                                   :c1 c1
+                                   :c2 c2})
+              :the-c3)))))
 
       (named :c3)))
 
@@ -51,7 +55,7 @@
         make-the-system (fn []
                           (make-system #{(make-c1 !events)
                                          (make-c2 !events)
-                                         (make-c3 !events {:throw? false})}))]
+                                         (make-c3 !events {})}))]
 
     (yc/with-system (make-the-system)
       (fn [system]
