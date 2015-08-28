@@ -3,9 +3,7 @@
             [yoyo.system.watcher :as w]
             [yoyo.system.run :as r]
             [yoyo.system.protocols :as p]
-            [cats.core :as c])
-
-  (:import [yoyo.system.protocols Dependency]))
+            [cats.core :as c]))
 
 (defn ->dep [v]
   (c/return p/dependent-monad v))

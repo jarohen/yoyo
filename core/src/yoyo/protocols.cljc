@@ -18,12 +18,15 @@
   (get-context [_]
     component-monad)
 
-  clojure.lang.IDeref
-  (deref [_]
-    v))
+  #?@(:clj
+       [clojure.lang.IDeref,
+        (deref [_]
+               v)]
 
-(defmethod print-method YoyoComponent [{:keys [v]} w]
-  (.write w (format "#yoyo/component %s" (pr-str v))))
+       :cljs
+       [cljs.core.IDeref
+        (-deref [_]
+                v)]))
 
 (def component-monad
   (reify

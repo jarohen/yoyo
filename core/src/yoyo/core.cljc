@@ -1,8 +1,7 @@
 (ns yoyo.core
   (:require [yoyo.protocols :as p]
             [yoyo.sink :as sink]
-            [cats.core :as c])
-  (:import [yoyo.protocols YoyoComponent]))
+            [cats.core :as c]))
 
 (defn ->component
   ([v]
