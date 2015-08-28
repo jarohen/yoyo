@@ -1,4 +1,6 @@
-(ns yoyo.core
+(ns ^{:clojure.tools.namespace.repl/load false
+      :clojure.tools.namespace.repl/unload false}
+  yoyo.core
   (:require [yoyo.protocols :as p]
             [yoyo.sink :as sink]
             [cats.core :as c]))

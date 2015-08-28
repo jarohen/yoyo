@@ -1,4 +1,7 @@
-(ns yoyo.system.protocols
+(ns ^{:clojure.tools.namespace.repl/load false
+      :clojure.tools.namespace.repl/unload false}
+
+  yoyo.system.protocols
   (:require [cats.core :as c]
             [cats.protocols :as cp]))
 

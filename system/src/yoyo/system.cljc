@@ -1,4 +1,6 @@
-(ns yoyo.system
+(ns ^{:clojure.tools.namespace.repl/load false
+      :clojure.tools.namespace.repl/unload false}
+  yoyo.system
   (:require [yoyo.core :as yc]
             [yoyo.system.watcher :as w]
             [yoyo.system.runner :as r]
