@@ -34,7 +34,7 @@
 
   (if-let [system-fn @!system-fn]
     (let [new-system (system-fn)]
-      (when-not (satisfies? new-system yp/IComponent)
+      (when-not (satisfies? yp/IComponent new-system)
         (throw (ex-info "Expecting a system, got" (type new-system))))
 
       (boolean (reset! !system new-system)))
