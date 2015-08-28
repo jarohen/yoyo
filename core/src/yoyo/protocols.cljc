@@ -38,7 +38,7 @@
     (mbind [_ {outer-v :v, outer-stop-fn :stop-fn} f]
       (let [{inner-v :v, inner-stop-fn :stop-fn} (try
                                                    (f outer-v)
-                                                   (catch Throwable t
+                                                   (catch #?(:clj Throwable, :cljs js/Error) t
                                                      (try
                                                        (when outer-stop-fn
                                                          (outer-stop-fn))
