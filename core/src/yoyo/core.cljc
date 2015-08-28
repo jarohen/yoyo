@@ -38,8 +38,8 @@
 
   (with-system (-> (c/mlet [db-pool (open-db-pool)
                             web-server (open-server db-pool)]
-                     (c/return {:db-pool db-pool
-                                :web-server web-server}))
+                     (->component {:db-pool db-pool
+                                   :web-server web-server}))
                    (with-system-put-to 'user/foo-system))
     (fn [system]
       (println "started:" (pr-str system))
