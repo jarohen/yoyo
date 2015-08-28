@@ -35,6 +35,8 @@
 
 ;; Dependent a = Resolved a | Nested Key (System -> Dependent a) | Env (System -> Dependent a)
 
+(declare ->NestedDependent ->EnvDependent)
+
 (defrecord NestedDependent [dep-key f]
   cp/Context
   (get-context [_] dependent-monad)
@@ -78,7 +80,7 @@
 (def dependent-monad
   (reify
     cp/Functor
-    (cp/fmap [m f dependent]
+    (fmap [m f dependent]
       (cp/mbind m dependent (comp #(cp/mreturn m %) f)))
 
     cp/Monad

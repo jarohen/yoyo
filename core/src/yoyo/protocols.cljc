@@ -24,7 +24,7 @@
                v)]
 
        :cljs
-       [cljs.core.IDeref
+       [IDeref
         (-deref [_]
                 v)]))
 
