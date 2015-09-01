@@ -36,6 +36,13 @@
   (try-satisfy [_ _]
     v))
 
+(extend-protocol Dependent
+  nil
+  (dbind [_ f]
+    (f nil))
+  (try-satisfy [_ system]
+    (->ResolvedDependent nil)))
+
 ;; Dependent a = Resolved a | Nested Key (System -> Dependent a) | Env (System -> Dependent a)
 
 (declare ->NestedDependent ->EnvDependent)
