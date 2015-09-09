@@ -21,7 +21,7 @@
   (defn make-system [latch]
     (...
      (fn [...]
-       (http/with-web-server {:handler (make-handler ...)
+       (http/with-server {:handler (make-handler ...)
                               :server-opts {:port ...
                                             ...}} ; anything else you'd pass to org.httpkit.server/run-server
          (fn [server]
