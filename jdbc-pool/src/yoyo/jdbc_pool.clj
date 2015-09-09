@@ -11,7 +11,29 @@
    "sqlite" "org.sqlite.JDBC"
    "h2" "org.h2.Driver"})
 
-(defn open-db-pool [{:keys [driver subprotocol host port username password db max-total max-idle]}]
+(defn open-db-pool
+  " :: pool-config -> Component {:datasource ...}
+
+  This returns a Component containing a started JDBC database pool.
+
+  Usage:
+    (require '[yoyo.jdbc-pool :as db]
+             '[yoyo.core :as yc]
+             '[clojure.java.jdbc :as jdbc])
+
+    (yc/with-component (open-db-pool {...})
+      (fn [db-pool]
+        (jdbc/with-db-transaction [tx db-pool]
+          (jdbc/query tx
+                      \"SELECT * FROM users\"))))
+
+  Will guess the driver based on the subprotocol, if driver is omitted.
+
+  The returned component is also a monadic value compatible with
+  Cats's monad functions/macros, and Yoyo's 'system'."
+
+  [{:keys [driver subprotocol host port username password db max-total max-idle]}]
+
   (log/info "Starting JDBC pool...")
 
   (let [pool {:datasource (doto (BasicDataSource.)
