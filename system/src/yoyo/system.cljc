@@ -7,19 +7,54 @@
             [yoyo.system.protocols :as p]
             [cats.core :as c]))
 
-(defn ->dep [v]
-  (c/return p/dependent-monad v))
+(defn ->dep
+  " :: a -> Dependent a
 
-(defn named [dependent-fn id]
+  `return`, for the Dependent monad"
+  [v]
+
+  (p/->ResolvedDependent v))
+
+(defn named
+  " :: (() -> Dependent a) -> Dependency a
+
+  Given a function returning a Dependent, returns a named Dependency
+  for use in `make-system`"
+  [dependent-fn id]
+
   (p/map->InitialDependency {:id id
                              :dependent-fn dependent-fn}))
 
-(defn ask [p & path]
+(defn ask
+  " :: path -> Dependent a
+
+  Given a path into the system map, returns a Dependent awaiting the given path.
+
+  Essentially, behaves as if it calls `get-in` on the system with the
+  provided path.
+
+  Usage:
+
+    (assuming a system with a dependency named `:config` - a map
+     containing {:s3 {:creds ..., :bucket \"...\"}})
+
+    (defn m-get-object [s3-path]
+      (c/mlet [{:keys [creds bucket]} (ys/ask :config :s3)]
+        (ys/->dep
+         (aws.sdk.s3/get-object creds bucket s3-path))))"
+
+  [p & path]
+
   (p/map->NestedDependent {:dep-key p
                            :f (fn [system]
                                 (->dep (get-in system (cons p path))))}))
 
-(defn ask-env []
+
+
+(defn ask-env
+  " :: Dependent Env"
+  []
+
   (p/env-dependent))
 
 (defn- try-satisfy-dependencies [m-system]
