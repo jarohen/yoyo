@@ -1,7 +1,7 @@
 * Yo-yo
 
-  #+ATTR_HTML: title="Join the chat at https://gitter.im/james-henderson/yoyo"
-  [[https://gitter.im/james-henderson/yoyo?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge][file:https://badges.gitter.im/Join%20Chat.svg]]
+#+ATTR_HTML: title="Join the chat at https://gitter.im/james-henderson/yoyo"
+[[https://gitter.im/james-henderson/yoyo?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge][file:https://badges.gitter.im/Join%20Chat.svg]]
 
 Yo-yo is a lightweight library for starting, reloading (via
 clojure.tools.namespace) and stopping Clojure systems in a functional
