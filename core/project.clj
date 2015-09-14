@@ -9,6 +9,7 @@
                  [medley "0.7.0"]
                  [org.clojure/tools.namespace "0.2.11"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [funcool/cats "0.6.1"]]
+                 [funcool/cats "0.6.1"]
+                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]]
 
   :exclusions [org.clojure/clojure])
