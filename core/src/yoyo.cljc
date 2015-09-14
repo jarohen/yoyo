@@ -4,7 +4,6 @@
   (:require [yoyo.core :as yc]
             [yoyo.protocols :as yp]
             [yoyo.reresolve :as yr]
-            [medley.core :as m]
             #?@(:clj
                 [[clojure.tools.namespace.repl :as ctn]])))
 
@@ -48,9 +47,12 @@
   Returns the return value of the system."
   []
 
-  (let [system (m/deref-reset! !system nil)]
-    (when system
-      (yp/stop! system))))
+  (when-let [system (loop []
+                      (let [system @!system]
+                        (if (compare-and-set! !system system nil)
+                          system
+                          (recur))))]
+    (yp/stop! system)))
 
 (defn reload!
   "Reloads a Yo-yo system by stopping and restarting it."
