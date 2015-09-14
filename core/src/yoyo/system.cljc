@@ -87,7 +87,10 @@
                                  (map (juxt :id (comp :dep-key :dependent)))
                                  (into {}))})))
 
-(defn make-system [dependencies]
+(defn make-system
+  ":: #{Dependency} -> System"
+  [dependencies]
+
   (loop [m-system (let [env (zipmap (map :id dependencies)
                                     (repeatedly w/watcher))]
                     (yc/->component (-> {:system (-> {}
@@ -107,19 +110,46 @@
             (recur new-m-system)
             (throw (cycle-error new-m-system))))))))
 
-(defn run [dependent system]
+(defn run
+  " :: Dependent a -> System -> a"
+  [dependent system]
+
   (r/run dependent system))
 
 
 #?(:clj
-   [(defn run!! [dependent env]
+   [(defn run!!
+      ":: Dependent a -> Env -> a"
+      [dependent env]
+
       (r/run!! dependent env))
 
     (defn wrap-run!! [f env]
-      (r/wrap-run!! f env))])
+      ":: ((...) -> Dependent a) -> Env -> ((...) -> a)"
+      (r/wrap-run!! f env))
 
-(defn run-async [dependent env]
+    (defn m-wrap-run!!
+      ":: ((...) -> Dependent a) -> Dependent ((...) -> a)"
+      [f]
+      (c/bind (ys/ask-env)
+              (fn [env]
+                (wrap-run!! f env))))])
+
+(defn run-async
+  ":: Dependent a -> Env -> Channel a"
+  [dependent env]
+
   (r/run-async dependent env))
 
-(defn wrap-run-async [f env]
+(defn wrap-run-async
+  ":: ((...) -> Dependent a) -> Env -> ((...) -> Channel a)"
+  [f env]
+
   (r/wrap-run-async f env))
+
+(defn m-wrap-run-async
+  ":: ((...) -> Dependent a) -> Dependent ((...) -> Channel a)"
+  [f]
+  (c/bind (ys/ask-env)
+          (fn [env]
+            (wrap-run-async f env))))
