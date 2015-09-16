@@ -1,5 +1,3 @@
-* Yo-yo
-
 #+ATTR_HTML: title="Join the chat at https://gitter.im/james-henderson/yoyo"
 [[https://gitter.im/james-henderson/yoyo?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge][file:https://badges.gitter.im/Join%20Chat.svg]]
 
@@ -7,7 +5,7 @@ Yo-yo is a lightweight library for composing 'Components' in a
 functional style, in Clojure and ClojureScript, using Clojure's '[[https://github.com/funcool/cats][Cats]]'
 monad library.
 
-** Dependency:
+** Dependency
 
 #+BEGIN_SRC clojure
   [jarohen/yoyo "0.0.6-SNAPSHOT"]
@@ -210,7 +208,128 @@ My ~-main~ functions, therefore, usually look something like this:
 
 *** Dependents
 
-=TODO=
+Yo-yo's dependency injection is based on a system map - a map of
+values, identified by a dependency key.
+
+Yo-yo will, given a set of values that declare their dependencies,
+construct this system map in the correct order and, when required,
+stop the system in the opposite order.
+
+Yo-yo's second data type, therefore, is the *Dependent* - a value that
+depends on another value. A Dependent has two possible instance
+types - firstly, another pair, this time consisting of:
+
+- the dependency key of the value that it depends on, and
+- a function that, given a system with that key, returns another
+  Dependent
+
+There's also a simple base case, where we've resolved all the
+dependencies that we need - this is a simple wrapper around the
+resolved value.
+
+Again, if we were writing Haskell, we might write the type out like
+this:
+
+#+BEGIN_SRC haskell
+  Dependent a =   Resolved a
+                | Dependent (DependencyKey, (System -> Dependent a))
+#+END_SRC
+
+(The fact that there are two types here is, in fact, completely
+transparent to users of Yo-yo, but is included here for interest!)
+
+**** The Dependent Monad
+
+These Dependent values are also easily composed: given two values,
+each with a dependency, we can compose them into a single Dependent
+that requests the first dependency but then, when it's function is
+given the first value, returns a Dependent depending on the second
+value.
+
+Of course, given that we can compose two Dependents in this way, we
+can compose arbitrarily many.
+
+It shouldn't be much of a surprise to readers who've made it this far,
+but the Dependent value is also monadic, and can therefore be bound,
+~fmap~'d, and ~mlet~'d as before.
+
+Dependents are quite similar to the Reader monad, with the main
+difference that each value declares its dependency in advance - this
+is so that Yo-yo's dependency resolution can construct dependencies in
+the correct order.
+
+Yo-yo, therefore, provides two main constructors for the Dependent
+type:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.system :as ys])
+
+  ;; 'return' - yields a 'Resolved' dependent
+  (ys/->dep <value>)
+
+  ;; 'ask' - returns a Dependent depending on the given key
+  (ys/ask :db-pool)
+
+  ;; 'ask' also takes a path, if the value that you're depending happens
+  ;; to be a map
+  (ys/ask :config :aws :secret-key)
+#+END_SRC
+
+We can then combine Dependents together easily - let's say, to fetch a
+user from a database:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.system :as ys]
+            [cats.core :as c]
+            [clojure.java.jdbc :as jdbc])
+
+  ;; prefixing with 'm-' because we're returning a value of type
+  ;; 'Dependent User', not a 'User'
+  (defn m-get-user [user-id]
+    (c/mlet [db-pool (ys/ask :db-pool)]
+      (ys/->dep
+       (jdbc/query db-pool
+                   ["SELECT * FROM users WHERE user_id = ?" user-id]))))
+#+END_SRC
+
+Callers of ~m-get-user~ then don't need to know/worry that it depends
+on the database pool - they can compose with it all the same:
+
+#+BEGIN_SRC clojure
+  (defn m-send-confirmation-email! [user-id]
+    (c/mlet [{:keys [email-address] :as user} (m-get-user user-id)]
+      (ys/->dep
+       (send-email! email-address (format-confirmation-email user)))))
+#+END_SRC
+
+The return value of that function is still a Dependent on the
+~:db-pool~, but there's no reason for ~m-send-confirmation-email!~ to
+know!
+
+**** Evaluating a Dependent
+
+Before we get into the dependency injection side of Yo-yo system, it's
+still possible to evaluate a Dependent, by providing a pre-constructed
+system map to ~ys/run~. This, again, is particularly useful for testing:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.system :as ys])
+
+  (deftest test-the-config
+    (-> (c/mlet [{:keys [access-key secret-key]} (ys/ask :config :aws)]
+          (ys/->dep
+           (is (= secret-key "very-secret"))))
+
+        (ys/run {:config {:aws {:secret-key "maybe-this-isnt-so-secret-really"}}})))
+#+END_SRC
+
+~ys/run~, here, is taking a Dependent and a system map, and returning
+the resolved result of the Dependent - in this case, the return value
+of ~(is (= secret-key "very-secret"))~
+
+**** Building up a system, with Dependents
+
+
 
 ** Templates
 
