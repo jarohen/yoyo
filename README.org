@@ -3,14 +3,14 @@
 #+ATTR_HTML: title="Join the chat at https://gitter.im/james-henderson/yoyo"
 [[https://gitter.im/james-henderson/yoyo?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge][file:https://badges.gitter.im/Join%20Chat.svg]]
 
-Yo-yo is a lightweight library for starting, reloading (via
-clojure.tools.namespace) and stopping Clojure systems in a functional
-style.
+Yo-yo is a lightweight library for composing 'Components' in a
+functional style, in Clojure and ClojureScript, using Clojure's '[[https://github.com/funcool/cats][Cats]]'
+monad library.
 
 ** Dependency:
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo "0.0.5"]
+  [jarohen/yoyo "0.0.6-SNAPSHOT"]
 #+END_SRC
 
 There will likely be many breaking changes until 0.1.0!
@@ -32,24 +32,23 @@ discussions.
 
 *** What Yo-yo is:
 
-- A lightweight library (currently ~100 LoC!) for starting, reloading
-  and stopping Clojure systems in a functional style.
+- A means of composing stoppable 'Components'
+- Optionally, (via ~yoyo.system~) a means of composing Components that
+  depend on other Components.
 - That's it!
 
 *** What Yo-yo isn't:
 
 - A configuration library
-- A dependency injection library
 - A Leiningen/Boot plugin
 - A source of painful Java/OO/Spring memories ;)
 - ...
 
 *** What Yo-yo (core) isn't, but is also provided in this repo
 
-- A module for starting/stopping an Aleph web server
+- A module for starting/stopping Aleph/http-kit web servers.
 - A module for compiling/building CLJS
 - A module for starting/stopping JDBC connection pools
-- A module for integrating [[https://github.com/stuartsierra/component][Component]] components/systems
 - Templates for creating webapps and REST APIs
 
 ** Getting Started - your first Yo-yo system
@@ -61,211 +60,157 @@ I'm presuming you've added the Yo-yo dependency. It's at the top. Go
 have a look and copy it into your project.clj/build.boot - I'll
 wait :)
 
-Before we =require= in Yo-yo, let's think about a toy database
-connection pool - a resource that needs to be started and
-stopped. Let's also assume we're given a function that takes a started
-connection pool, and returns when the system needs to be stopped
-(we'll pass this in as =f=). What does this DB pool look like?
+Yo-yo is based on two main data types: *Components* and *Dependents*.
+
+*** Components
+
+Components are just a pair - a value, and (optionally) a means of
+'stopping' the value (whatever that may mean for the value in
+question), created using ~yoyo.core/->component~. For example, for a
+database pool, you could create a Yo-yo Component as follows:
 
 #+BEGIN_SRC clojure
-  (defn with-db-pool [db-config f]
-    (let [db-pool (start-pool! db-config)]
-      (try
-        (f db-pool)
+  (:require [yoyo.core :as yc])
 
-        (finally
-          (stop-pool! db-pool)))))
+  (defn open-db-pool! [db-config]
+    (let [db-pool (start-db-pool! db-config)]
+      (yc/->component db-pool
+                      (fn []
+                        (stop-db-pool! db-pool)))))
 #+END_SRC
 
-I'm cheating slightly here, assuming something else actually does the
-starting and stopping, but we only care about the lifecycle here,
-right?!
+The interesting side to Components is that they compose very simply -
+when we compose two Components together, we'd expect a combined
+Component to have a combination of the two values, and a stop function
+consisting of the two stop functions, in reverse order.
 
-These actually compose pretty well - they're just functions! Let's
-start a web server, using a Ring handler that depends on the DB pool:
+So, let's say we wanted to compose a database pool with a scheduler
+that required a database pool, we'd want to compose them as follows:
 
 #+BEGIN_SRC clojure
-  ;; first - a couple of helper functions...
+  (defn start-scheduler! [db-pool]
+    (let [scheduled-task {:times ...
+                          :schedule-fn (fn []
+                                         (run-job! ... {:db-pool db-pool}))}
+          stop-scheduler! (schedule! scheduled-task)]
 
-  (defn with-web-server [{:keys [handler port]} f]
-    ;; left as an exercise to the reader - it's pretty similar to the
-    ;; one above!
+      (yc/->component scheduled-task
+                      (fn []
+                        (stop-scheduler!)))))
+
+  (defn combine-components [component f]
+    ;; ...
     )
 
-  (defn make-handler [{:keys [db-pool]}]
-    (routes
-      (GET "/" []
-        ;; you've all seen this before too...
+  (defn start-combined-component! [db-config]
+    (let [db-pool-component (open-db-pool! db-config)]
+      (combine-components db-pool-component
+                          (fn [db-pool]
+                            (start-scheduler! db-pool)))))
+#+END_SRC
 
-        ;; note that you have access to the db-pool here :)
+We'd expect ~start-combined-component!~ to return a Component with the
+combined value, and a stop-function that first stops the scheduler,
+then the database pool, as specified. This combined Component can then
+be combined with other Components (combined or otherwise), using the
+same ~combine-components~ function, to form a larger system.
+
+What I've just described, is the monadic 'bind' function, over
+Components - which, if it were written in Haskell, would have the
+following type:
+
+#+BEGIN_SRC haskell
+  bind :: Component a -> (a -> Component b) -> Component b
+#+END_SRC
+
+We can then use all of the support in [[https://github.com/funcool/cats][Cats]] to build up our systems. I
+won't duplicate its documentation here, but one macro in particular is
+very useful: ~mlet~.
+
+~mlet~ is structured similarly to Clojure's ~let~ bindings, except all
+of the values on the right-hand-side are monadic values (in this case,
+Components) which are then extracted and bound to the symbols on the
+left, like Haskell's ~do~ notation:
+
+#+BEGIN_SRC clojure
+  (:require [cats.core :as c])
+
+  (defn start-combined-component! [db-config]
+    (c/mlet [db-pool (open-db-pool! db-config)
+             scheduled-task (start-scheduler! db-pool)]
+      (yc/->component {:db-pool db-pool
+                       :scheduled-task scheduled-task})))
+#+END_SRC
+
+The value returned by the ~mlet~ is itself a monadic value, and hence
+can itself be combined again into higher-level Components.
+
+We don't have to worry about combining the stop-functions of the two
+Components - the bind functionality, implemented by Yo-yo and called
+by ~mlet~, handles all of that. Likewise, the Yo-yo bind
+implementation includes error handling so that, if a subsequent
+Component fails, the earlier Components are stopped - you aren't left
+with a half-started system.
+
+(Here, we're using the 1-arg version of ~yc/->component~, because the
+combined Component doesn't require any 'stop' behaviour of its own,
+above the stop-functions of the two individual Components.)
+
+**** Testing a Component system
+
+Components can be tested on their own, or as part of a combined
+Component, using Yo-yo's ~yc/with-component~ function:
+
+#+BEGIN_SRC clojure
+  (deftest test-component
+    (yc/with-component (open-db-pool! {...})
+      (fn [db-pool]
+        ;; test away!
         )))
 
-  ;; now let's wire it up:
-
-  (with-db-pool {...}
-    (fn [db-pool]
-      (with-web-server {:handler (make-handler {:db-pool db-pool})
-                        :port ...}
-        (fn [web-server]
-          ;; TODO: Ah. We've run out of turtles.
-          ;;       What goes in here?!!
-          ))))
+  (deftest test-combination
+    (yc/with-component (start-combined-component! {...})
+      (fn [{:keys [db-pool scheduled-task]}]
+        ;; test away!
+        )))
 #+END_SRC
 
-What goes in the middle there? Until that point, it's turtles all the
-way down, but at some point we actually need a function that waits for
-some signal to 'stop the system'!
+~with-component~ passes the started Component to the given function,
+and stops it when the function returns.
 
-*** The full story:
+**** Starting/Stopping/Reloading a live Component system
 
-That's where Yo-yo comes in - there's a function called =run-system=,
-which you can call as follows:
+Yo-yo has a few REPL utilities in the top-level ~yoyo~ namespace:
+~yoyo/start!~, ~yoyo/stop!~ and ~yoyo/reload!~ - these allow you to
+quickly start, stop and reload your system from the REPL. To set these
+up, call ~yoyo/set-system-fn!~, passing it a 0-arg function returning
+a Component, and then REPL away to your heart's content.
 
-#+BEGIN_SRC clojure
-  (:require [yoyo])
+~yoyo/reload!~, by default, will stop the system, reload any
+changed namespaces using clojure.tools.namespace, then restart the
+system.
 
-  (yoyo/run-system
-   (fn [latch]
-     (with-db-pool {...}
-       (fn [db-pool]
-         (with-web-server {:handler (make-handler {:db-pool db-pool})
-                           :port ...}
-           (fn [web-server]
-             (latch))))))) ; Aha!
-#+END_SRC
-
-What's happening here?
-
-- When the system starts (when your code calls =(latch)=),
-  =run-system= returns a function.
-- Call that function, =(latch)= will return, and your system will
-  stop.
-
-**** Introducing 'ylet'
-
-These nested functions can turn into a 'staircase' very quickly,
-disappearing off the right-hand-side of your editor.
-
-Enter =ylet=, a macro to simplify the nested callbacks:
-
-#+BEGIN_SRC clojure
-  (:require [yoyo :refer [ylet]])
-
-  (yoyo/run-system
-   (fn [latch]
-     (ylet [db-pool (with-db-pool {...})
-            web-server (with-web-server {:handler (make-handler {:db-pool db-pool})
-                                         :port 3000})]
-       (latch))))
-#+END_SRC
-
-The expressions on the right-hand-size of a =ylet= are all missing
-their final parameter - the callback. =ylet= passes the callback for
-you, binding the callback parameter to the binding on the
-left-hand-side. For example, =with-db-pool= normally expects two
-arguments, but here we're only passing one - =ylet= will pass =(fn
-[db-pool] ...)= as the second.
-
-De-structuring's allowed too, in the usual manner.
-
-Similarly to Clojure's =for=, you can also 'break out' of the =ylet=
-semantics in the bindings, by passing =:let [...]=:
-
-#+BEGIN_SRC clojure
-  (yoyo/run-system
-   (fn [latch]
-     (ylet [db-pool (with-db-pool {...})
-            :let [server-opts {:handler (make-handler {:db-pool db-pool})
-                               :port 3000}]
-            web-server (with-web-server server-opts)]
-       (latch))))
-#+END_SRC
-
-
-*** The version you'll probably use, 99% of the time:
-
-You'll probably not want to run this system just once, so there are a
-number of lifecycle functions included for easy starting, stopping and
-reloading:
-
-- =(yoyo/set-system-fn! #'system-fn)= - stores a var pointing to
-  a system function (a function accepting a latch, like the one above)
-  for use with the functions below.
-- =(yoyo/start!)= - starts a system by calling the stored =system-fn=.
-- =(yoyo/stop!)= - stops the currently started system
-- =(yoyo/reload!)= - stops a system (if one's running), reloads all
-  your code (through clojure.tools.namespace), and starts it up again.
-
-In practice, this looks like:
+My ~-main~ functions, therefore, usually look something like this:
 
 #+BEGIN_SRC clojure
   (ns myapp.main
-    (:require [yoyo :refer [ylet]]
-              ...))
+    (:require [cats.core :as m]
+              [yoyo :as y]))
 
-  (defn make-system [latch]
-    (ylet [db-pool (with-db-pool {...})
-           web-server (with-web-server {:handler (make-handler {:db-pool db-pool})
-                                        :port 3000})]
-      (latch)))
+  (defn make-system []
+    (c/mlet [db-pool (open-db-pool! {...})
+             ...]
+      ...))
 
-  (defn -main [& args]
-    (yoyo/set-system-fn! #'make-system)
+  (defn -main []
+    (y/set-system-fn! #'make-system)
 
-    (yoyo/start!))
+    (y/start!))
 #+END_SRC
 
-In the REPL, later, you can call =(yoyo/stop!)= and =(yoyo/reload!)=
-to your heart's content :)
+*** Dependents
 
-*** That's all folks!
-
-That's all there is to Yo-yo core!
-
-** Provided modules
-
-There are a number of modules for common use-cases - web servers,
-connection pools, CLJS compilers, etc - each with their own
-documentation. Have a browse through the repo!
-
-If you do create your own, feel free to either start your own repo or
-submit a PR to this repo. For the sake of consistency, I'd probably
-recommend an artifact named =[<your-group>/yoyo.<your-module>]=.
-
-** Integrating with Component
-
-Components/Component systems can be seamlessly be brought into a Yo-yo
-system using the 'component' module in this repo.
-
-For an individual Component:
-
-#+BEGIN_SRC clojure
-  (:require [yoyo.component :as yc])
-
-  (yc/with-component (map->MyComponent {...})
-    (fn [started-component]
-      ;; next turtle
-      ))
-#+END_SRC
-
-The component will be started before being passed to this function,
-and stopped afterwards.
-
-For a whole system:
-
-#+BEGIN_SRC clojure
-  (:require [yoyo.component :as yc]
-            [com.stuartsierra.component :as c])
-
-  (yc/with-component-system (c/system-map
-                              ...)
-    (fn [started-system]
-      ;; next turtle
-      ))
-#+END_SRC
-
-Likewise, the system will be started before being passed to that
-function, and stopped afterwards.
+=TODO=
 
 ** Templates
 
@@ -293,8 +238,14 @@ time, thoughts, advice and inspiration for the ideas behind
 and around Yo-yo. Cheers Kris!
 
 Thanks also to those involved in discussions about Component which
-helped to shape Yo-yo, including (but not limited to) Daniel Neal,
-Martin Trojer, Yodit Stanton and Neale Swinnerton.
+helped to shape Yo-yo, including (but not limited to)
+
+- Michael Griffiths
+- @mccraigmccraig
+- Daniel Neal
+- Yodit Stanton
+- Neale Swinnerton
+- Martin Trojer
 
 Cheers!
 
