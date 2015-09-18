@@ -5,6 +5,9 @@ Yo-yo is a lightweight library for composing 'Components' in a
 functional style, in Clojure and ClojureScript, using Clojure's '[[https://github.com/funcool/cats][Cats]]'
 monad library.
 
+(Unless specified otherwise, all of the below works in both Clojure
+and ClojureScript)
+
 ** Dependency
 
 #+BEGIN_SRC clojure
@@ -154,6 +157,11 @@ with a half-started system.
 combined Component doesn't require any 'stop' behaviour of its own,
 above the stop-functions of the two individual Components.)
 
+**** What types can a Component wrap?
+
+Whatever you like! Vanilla maps, records, ~reify~'d protocols,
+functions, objects, you name it...
+
 **** Testing a Component system
 
 Components can be tested on their own, or as part of a combined
@@ -192,7 +200,7 @@ My ~-main~ functions, therefore, usually look something like this:
 
 #+BEGIN_SRC clojure
   (ns myapp.main
-    (:require [cats.core :as m]
+    (:require [cats.core :as c]
               [yoyo :as y]))
 
   (defn make-system []
@@ -205,6 +213,31 @@ My ~-main~ functions, therefore, usually look something like this:
 
     (y/start!))
 #+END_SRC
+
+**** Storing a reference to the started system
+
+It's often helpful to store a reference to the started system, to
+introspect for debugging purposes. You can wrap the system in
+~yc/with-system-put-to~, as follows:
+
+#+BEGIN_SRC clojure
+  (:require [cats.core :as c]
+            [yoyo.core :as yc])
+
+  (defn make-system []
+    (-> (c/mlet [db-pool (open-db-pool! {...})
+                 ...]
+          ...)
+
+        (yc/with-system-put-to 'user/foo-system)))
+#+END_SRC
+
+The started system is then available to query at the REPL, at
+~user/foo-system~. When the system is stopped, the reference is
+cleared.
+
+(In CLJ, this can be a symbol or an atom; in CLJS, just an atom (for
+now?))
 
 *** Dependents
 
@@ -329,7 +362,97 @@ of ~(is (= secret-key "very-secret"))~
 
 **** Building up a system, with Dependents
 
+This is all very well and good, if you have a system to hand!
 
+To create a system, with Yo-yo, we provide a set of *Dependencies* -
+Dependents with names. We create these with ~ys/named~ - passing it:
+
+- a function returning a =Dependent (Component a)= - a value that
+  depends on other values, that can also be 'stopped'
+- a dependency key
+
+#+BEGIN_SRC clojure
+  (defn make-config []
+    (-> (fn []
+          (ys/->dep
+           (yc/->component (read-config (io/file "config-file")))))
+
+        (ys/named :config)))
+
+  (defn make-db-pool []
+    (-> (fn []
+          (c/mlet [db-config (ys/ask :config :db)]
+            (ys/->dep
+             (let [db-pool (open-db-pool! db-config)]
+               (yc/->component db-pool
+                               (fn []
+                                 (close-db-pool! db-pool)))))))
+
+        (ys/named :db-pool)))
+#+END_SRC
+
+We then pass these two Dependencies to ~ys/make-system~ which returns
+a started, combined Component:
+
+#+BEGIN_SRC clojure
+  (defn make-system []
+    (ys/make-system #{(make-config)
+                      (make-db-pool)}))
+#+END_SRC
+
+~ys/make-system~ then looks at what each dependency ~ys/ask~-s for,
+directly or indirectly, and determines the required startup order.
+
+Systems constructed in multiple namespaces can be combined either by
+referring to individual functions, like ~make-config~, or by
+~clojure.set/union~-ing over multiple subsets.
+
+Notice that, at the top level, we don't have to provide a dependency
+set for each component - we pass ~ys/make-system~ an unordered set.
+This is done automatically based on what each component has
+~ys/ask~-ed for. This means that there's no need for the top-level to
+change if, one day, a component requires an extra dependency - just
+~ys/ask~ for it at the level of abstraction that it's needed, and
+Yo-yo's dependency resolution will automatically take it into account.
+
+We can then use our ~make-system~ function, as before, to create a
+live application:
+
+#+BEGIN_SRC clojure
+  (ns myapp.main
+    (:require [cats.core :as c]
+              [yoyo :as y]
+              [yoyo.system :as ys]))
+
+  ;; ...
+
+  (defn make-system []
+    (ys/make-system #{(make-config)
+                      (make-db-pool)}))
+
+  (defn -main []
+    (y/set-system-fn! #'make-system)
+
+    (y/start!))
+#+END_SRC
+
+We can also test the whole system, in the same way as before:
+
+#+BEGIN_SRC clojure
+  ;; ...
+
+  (defn make-system []
+    (ys/make-system #{(make-config)
+                      (make-db-pool)}))
+
+  (deftest test-system
+    (yc/with-component (make-system)
+      (fn [{:keys [config db-pool]}]
+        ;; test away!
+        )))
+#+END_SRC
+
+**** Getting dependencies asynchronously
 
 ** Templates
 
