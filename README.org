@@ -11,7 +11,7 @@ and ClojureScript)
 ** Dependency
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo "0.0.6-beta1"]
+  [jarohen/yoyo "0.0.6-beta2"]
 #+END_SRC
 
 There will likely be many breaking changes until 0.1.0!
