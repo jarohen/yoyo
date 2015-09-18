@@ -2,9 +2,11 @@
   (:require [{{name}}.service.css :as css]
             [bidi.bidi :as bidi]
             [bidi.ring :as br]
-            [yoyo.cljs :as cljs]
             [hiccup.page :refer [html5 include-css include-js]]
-            [ring.util.response :refer [response content-type]]))
+            [ring.util.response :refer [response content-type]]
+            [cats.core :as c]
+            [yoyo.cljs :as cljs]
+            [yoyo.system :as ys]))
 
 ;; This is all in one NS for now, but you'll likely want to split it
 ;; out when your webapp grows!
@@ -14,29 +16,33 @@
        "/css" {"/site.css" {:get :site-css}}
        "/webjars" (br/resources {:prefix "META-INF/resources/webjars"})}])
 
-(defn page-handler [{:keys [cljs-compiler]}]
-  (fn [req]
-    (-> (response
-         (html5
-          [:head
-           [:title "{{name}} - CLJS Single Page Web Application"]
+(defn m-page-handler []
+  (c/mlet [cljs-compiler (ys/ask :cljs-compiler)]
+    (ys/->dep
+     (fn [req]
+       (-> (response
+            (html5
+             [:head
+              [:title "{{name}} - CLJS Single Page Web Application"]
 
-           (include-js "/webjars/jquery/2.1.4/jquery.min.js")
-           (include-js "/webjars/bootstrap/3.3.5/js/bootstrap.min.js")
-           (include-css "/webjars/bootstrap/3.3.5/css/bootstrap.min.css")
+              (include-js "/webjars/jquery/2.1.4/jquery.min.js")
+              (include-js "/webjars/bootstrap/3.3.5/js/bootstrap.min.js")
+              (include-css "/webjars/bootstrap/3.3.5/css/bootstrap.min.css")
 
-           (include-js (cljs/path-for-js cljs-compiler))
-           (include-css (bidi/path-for site-routes :site-css :request-method :get))]
+              (include-js (cljs/path-for-js cljs-compiler))
+              (include-css (bidi/path-for site-routes :site-css :request-method :get))]
 
-          [:body]))
+             [:body]))
 
-        (content-type "text/html"))))
+           (content-type "text/html"))))))
 
-(defn site-handlers [handler-opts]
-  {:page-handler (page-handler handler-opts)
-   :site-css (fn [req]
-                    (-> (response (css/site-css))
-                        (content-type "text/css")))})
+(defn m-site-handlers []
+  (c/mlet [page-handler (m-page-handler)]
+    (ys/->dep
+     {:page-handler page-handler
+      :site-css (fn [req]
+                  (-> (response (css/site-css))
+                      (content-type "text/css")))})))
 
 (def api-routes
   ["/api" {}])
@@ -44,15 +50,18 @@
 (defn api-handlers []
   {})
 
-(defn make-handler [{:keys [cljs-compiler] :as handler-opts}]
-  (br/make-handler ["" [site-routes
-                        api-routes
-                        (cljs/bidi-routes cljs-compiler)]]
+(defn m-make-handler []
+  (c/mlet [site-handlers (m-site-handlers)
+           cljs-compiler (ys/ask :cljs-compiler)]
+    (ys/->dep
+     (br/make-handler ["" [site-routes
+                           api-routes
+                           (cljs/bidi-routes cljs-compiler)]]
 
-                   (some-fn (site-handlers handler-opts)
-                            (api-handlers)
+                      (some-fn site-handlers
+                               (api-handlers)
 
-                            #(when (fn? %) %)
+                               #(when (fn? %) %)
 
-                            (constantly {:status 404
-                                         :body "Not found."}))))
+                               (constantly {:status 404
+                                            :body "Not found."}))))))

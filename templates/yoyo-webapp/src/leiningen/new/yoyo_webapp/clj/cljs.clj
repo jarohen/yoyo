@@ -1,5 +1,6 @@
 (ns {{name}}.service.cljs
-  (:require [yoyo.cljs :as cljs]))
+  (:require [yoyo.cljs :as cljs]
+            [yoyo.system :as ys]))
 
 (def cljs-config
   {:source-paths ["ui-src"]
@@ -17,8 +18,9 @@
            :pretty-print? false
            :classpath-prefix "js"}})
 
-(defn with-cljs-compiler [f]
-  (cljs/with-cljs-compiler cljs-config f))
+(defn make-cljs-compiler []
+  (ys/->dep
+   (cljs/start-cljs-compiler! cljs-config)))
 
 (defn build-cljs! []
   (cljs/build-cljs! cljs-config))

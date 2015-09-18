@@ -2,13 +2,17 @@
   (:require [{{name}}.service.handler :refer [make-handler]]
             [clojure.tools.logging :as log]
             [nrepl.embed :as nrepl]
-            [yoyo :refer [ylet]]
-            [yoyo.aleph :as aleph]))
+            [yoyo.aleph :as aleph]
+            [yoyo.system :as ys]))
 
-(defn make-system [latch]
-  (ylet [web-server (aleph/with-webserver {:handler (make-handler)
-                                           :port 3000})]
-    (latch)))
+(defn make-web-server []
+  (ys/->dep
+   (aleph/start-server! {:handler (make-handler)
+                         :server-opts {:port 3000}})))
+
+(defn make-system []
+  (ys/make-system #{(-> make-web-server
+                        (ys/named :web-server))}))
 
 (defn -main []
   (nrepl/start-nrepl! {:port 7888})

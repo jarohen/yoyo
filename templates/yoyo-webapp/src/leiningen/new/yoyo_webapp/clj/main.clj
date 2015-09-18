@@ -1,16 +1,25 @@
 (ns {{name}}.service.main
-  (:require [{{name}}.service.handler :refer [make-handler]]
+  (:require [{{name}}.service.handler :refer [m-make-handler]]
             [{{name}}.service.cljs :as cljs]
+            [cats.core :as c]
             [clojure.tools.logging :as log]
             [nrepl.embed :as nrepl]
-            [yoyo :refer [ylet]]
-            [yoyo.aleph :as aleph]))
+            [yoyo :as y]
+            [yoyo.aleph :as aleph]
+            [yoyo.system :as ys]))
 
-(defn make-system [latch]
-  (ylet [cljs-compiler (cljs/with-cljs-compiler)
-         web-server (aleph/with-webserver {:handler (make-handler {:cljs-compiler cljs-compiler})
-                                           :port 3000})]
-    (latch)))
+(defn make-webserver []
+  (c/mlet [handler (m-make-handler)]
+    (ys/->dep
+     (aleph/start-server! {:handler handler
+                           :server-opts {:port 3000}}))))
+
+(defn make-system []
+  (ys/make-system #{(-> cljs/make-cljs-compiler
+                        (ys/named :cljs-compiler))
+
+                    (-> make-webserver
+                        (ys/named :web-server))}))
 
 (defn build! []
   (cljs/build-cljs!)
@@ -19,6 +28,6 @@
 (defn -main []
   (nrepl/start-nrepl! {:port 7888})
 
-  (yoyo/set-system-fn! '{{name}}.service.main/make-system)
+  (y/set-system-fn! '{{name}}.service.main/make-system)
 
-  (yoyo/start!))
+  (y/start!))
