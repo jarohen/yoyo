@@ -1,0 +1,30 @@
+* Aleph - Yo-yo module
+
+** Dependency
+
+#+BEGIN_SRC clojure
+  [jarohen/yoyo.aleph "0.0.3"]
+#+END_SRC
+
+** Usage
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.aleph :as aleph]
+            [yoyo.core :as yc]
+            [cats.core :as c])
+
+  (defn make-handler [...]
+    (routes
+      (GET "/" []
+        ...)))
+
+  ;; when you're making your system:
+
+  (defn make-system []
+    (c/mlet [...
+             server (aleph/start-server! {:handler (make-handler ...)
+                                          :server-opts {:port ...
+                                                        ...}}) ; anything else you'd pass to aleph.http/start-server
+             ...]
+      ...))
+#+END_SRC

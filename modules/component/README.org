@@ -1,0 +1,80 @@
+* Component - Yo-yo module
+
+A small Yo-yo module to embed Components/Component systems into a
+Yo-yo system.
+
+** Dependency
+
+#+BEGIN_SRC clojure
+  [jarohen/yoyo.component "0.0.1"]
+#+END_SRC
+
+** Usage
+
+*** Component in Yo-yo
+
+For an individual Component:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.component :refer [->yoyo-component]]
+            [cats.core :as c])
+
+  (c/mlet [...
+           started-component (->yoyo-component (map->MyComponent {...}))
+           ...]
+    ...)
+#+END_SRC
+
+The component will be started before being passed to this function,
+and stopped afterwards.
+
+For a whole system:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.component :refer [with-component-system]]
+            [cats.core :as c]
+            [com.stuartsierra.component :as c])
+
+  (c/mlet [...
+           started-system (system->yoyo-component (c/system-map ...))
+           ...]
+    ...)
+#+END_SRC
+
+Likewise, the system will be started before being passed to that
+function, and stopped afterwards.
+
+*** Yo-yo in Component
+
+You can also pull a Yo-yo module into a Component system using this
+libary:
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.component :as yc]
+            [yoyo.core :refer [->component]]
+            [com.stuartsierra.component :as c])
+
+  (defn start-db-pool! [db-opts]
+    (let [db-pool (...)]
+      (->component db-pool
+
+                   (fn []
+                     ;; stop pool
+                     ))))
+
+  (defn make-db-pool-component [db-opts]
+    (yc/->YoyoComponent #(start-db-pool! db-opts)))
+
+  ;; Usage:
+  (let [started-system (-> (c/system-map
+                             :yoyo-db-pool (make-db-pool-component ...)
+                             ;; ...
+                             )
+                           (c/start-system))
+
+        db-pool @(get-in started-system [:yoyo-db-pool :component])]
+
+    ;; ...
+
+    (c/stop-system started-system))
+#+END_SRC

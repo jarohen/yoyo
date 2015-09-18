@@ -1,0 +1,32 @@
+* HTTP-kit - Yo-yo module
+
+** Dependency
+
+#+BEGIN_SRC clojure
+  [jarohen/yoyo.http-kit "0.0.4"]
+#+END_SRC
+
+** Usage
+
+#+BEGIN_SRC clojure
+  (:require [yoyo.http-kit :as http]
+            [yoyo.core :as yc]
+            [cats.core :as c])
+
+  (defn make-handler [...]
+    (routes
+      (GET "/" []
+        ...)))
+
+  ;; when you're making your system:
+
+  (defn make-system []
+    (c/mlet [...
+             server (http/start-server! {:handler (make-handler ...)
+                                         :server-opts {:port ...
+                                                       ...}}) ; anything else you'd pass to org.httpkit.server/run-server
+             ...]
+      ...))
+
+
+#+END_SRC
