@@ -146,12 +146,12 @@ left, like Haskell's ~do~ notation:
 The value returned by the ~mlet~ is itself a monadic value, and hence
 can itself be combined again into higher-level Components.
 
-We don't have to worry about combining the stop-functions of the two
-Components - the bind functionality, implemented by Yo-yo and called
-by ~mlet~, handles all of that. Likewise, the Yo-yo bind
-implementation includes error handling so that, if a subsequent
-Component fails, the earlier Components are stopped - you aren't left
-with a half-started system.
+As users of Yo-yo, we don't have to worry about combining the
+stop-functions of the two Components - the bind functionality,
+implemented by Yo-yo and called by ~mlet~, handles all of
+that. Likewise, the Yo-yo bind implementation includes error handling
+so that, if a subsequent Component fails, the earlier Components are
+stopped - you aren't left with a half-started system.
 
 (Here, we're using the 1-arg version of ~yc/->component~, because the
 combined Component doesn't require any 'stop' behaviour of its own,
