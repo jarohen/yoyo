@@ -1,4 +1,4 @@
-(defproject jarohen/yoyo.component "0.0.3-beta1"
+(defproject jarohen/yoyo.component "0.0.3-beta2"
   :description "FIXME: write description"
   :url "https://github.com/james-henderson/yoyo"
 
@@ -9,4 +9,4 @@
                  [com.stuartsierra/component "0.2.3"]
                  [org.clojure/tools.logging "0.3.1"]
 
-                 [jarohen/yoyo "0.0.6-beta1"]])
+                 [jarohen/yoyo "0.0.6-beta2"]])

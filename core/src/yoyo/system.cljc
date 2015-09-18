@@ -130,7 +130,7 @@
     (defn m-wrap-run!!
       ":: ((...) -> Dependent a) -> Dependent ((...) -> a)"
       [f]
-      (c/bind (ys/ask-env)
+      (c/bind (ask-env)
               (fn [env]
                 (wrap-run!! f env))))])
 
@@ -149,6 +149,6 @@
 (defn m-wrap-run-async
   ":: ((...) -> Dependent a) -> Dependent ((...) -> Channel a)"
   [f]
-  (c/bind (ys/ask-env)
+  (c/bind (ask-env)
           (fn [env]
             (wrap-run-async f env))))

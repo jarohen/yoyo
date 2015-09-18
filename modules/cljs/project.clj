@@ -1,4 +1,4 @@
-(defproject jarohen/yoyo.cljs "0.0.5-beta1"
+(defproject jarohen/yoyo.cljs "0.0.5-beta2"
   :description "FIXME: write description"
   :url "https://github.com/james-henderson/yoyo"
 
@@ -9,6 +9,6 @@
 
                  [bidi "1.19.0"]
 
-                 [jarohen/yoyo "0.0.6-beta1"]
+                 [jarohen/yoyo "0.0.6-beta2"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.clojure/tools.logging "0.3.1"]])
