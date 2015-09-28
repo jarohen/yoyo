@@ -16,7 +16,7 @@
   (p/->ResolvedDependent v))
 
 (def nothing
-  (ys/->dep nil))
+  (->dep nil))
 
 (defn named
   " :: (() -> Dependent a) -> Dependency a
