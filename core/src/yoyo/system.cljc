@@ -15,6 +15,9 @@
 
   (p/->ResolvedDependent v))
 
+(def nothing
+  (ys/->dep nil))
+
 (defn named
   " :: (() -> Dependent a) -> Dependency a
 
@@ -48,8 +51,6 @@
   (p/map->NestedDependent {:dep-key p
                            :f (fn [system]
                                 (->dep (get-in system (cons p path))))}))
-
-
 
 (defn ask-env
   " :: Dependent Env"
