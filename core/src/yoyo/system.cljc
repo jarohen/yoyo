@@ -109,7 +109,12 @@
         (let [new-m-system (try-satisfy-dependencies m-system)]
           (if (not= (:dependencies @new-m-system) dependencies)
             (recur new-m-system)
-            (throw (cycle-error new-m-system))))))))
+
+            ;; We fmap s.t., if there are dep errors, we shut down the
+            ;; system
+            (->> m-system
+                 (c/fmap (fn [_]
+                           (throw (cycle-error new-m-system)))))))))))
 
 (defn run
   " :: Dependent a -> System -> a"
