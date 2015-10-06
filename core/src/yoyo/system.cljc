@@ -122,23 +122,22 @@
 
   (r/run dependent system))
 
-#?(:clj
-   [(defn run!!
-      ":: Dependent a -> Env -> a"
-      [dependent env]
+(defn run!!
+  ":: Dependent a -> Env -> a"
+  [dependent env]
 
-      (r/run!! dependent env))
+  (r/run!! dependent env))
 
-    (defn wrap-run!! [f env]
-      ":: ((...) -> Dependent a) -> Env -> ((...) -> a)"
-      (r/wrap-run!! f env))
+(defn wrap-run!! [f env]
+  ":: ((...) -> Dependent a) -> Env -> ((...) -> a)"
+  (r/wrap-run!! f env))
 
-    (defn m-wrap-run!!
-      ":: ((...) -> Dependent a) -> Dependent ((...) -> a)"
-      [f]
-      (c/bind (ask-env)
-              (fn [env]
-                (wrap-run!! f env))))])
+(defn m-wrap-run!!
+  ":: ((...) -> Dependent a) -> Dependent ((...) -> a)"
+  [f]
+  (c/bind (ask-env)
+          (fn [env]
+            (wrap-run!! f env))))
 
 (defn run-async
   ":: Dependent a -> Env -> Channel a"
