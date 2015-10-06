@@ -57,7 +57,7 @@
                                          (make-c2 !events)
                                          (make-c3 !events {})}))]
 
-    (yc/with-system (make-the-system)
+    (yc/with-component (make-the-system)
       (fn [system]
         (swap! !events conj {:event :started-system
                              :system system})))
@@ -85,7 +85,7 @@
                                          (make-c3 !events {:to-throw to-throw})}))]
 
     (try
-      (yc/with-system (make-the-system)
+      (yc/with-component (make-the-system)
         (fn [system]
           (swap! !events conj {:event :started-system
                                :system system})))

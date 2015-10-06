@@ -47,9 +47,9 @@
 
 (deftest runs-sync
   (let [!!val (promise)]
-    (yc/with-system (ys/make-system [(make-dep {:!!val !!val
-                                                :wrap-fn run!!})
-                                     (make-c1 {:to-throw nil})])
+    (yc/with-component (ys/make-system [(make-dep {:!!val !!val
+                                                   :wrap-fn run!!})
+                                        (make-c1 {:to-throw nil})])
       (fn [system]
         (is (= (:c1 system)
                :the-c1))
@@ -61,8 +61,8 @@
 
 (deftest runs-sync-without-dep
   (let [!!val (promise)]
-    (yc/with-system (ys/make-system [(make-dep {:!!val !!val
-                                                :wrap-fn run!!})])
+    (yc/with-component (ys/make-system [(make-dep {:!!val !!val
+                                                   :wrap-fn run!!})])
       (fn [system]
         (try
           @@!!val
@@ -97,9 +97,9 @@
 
 (deftest runs-async
   (let [!!val (promise)]
-    (yc/with-system (ys/make-system [(make-dep {:!!val !!val
-                                                :wrap-fn run-async})
-                                     (make-c1 {:to-throw nil})])
+    (yc/with-component (ys/make-system [(make-dep {:!!val !!val
+                                                   :wrap-fn run-async})
+                                        (make-c1 {:to-throw nil})])
       (fn [system]
         (is (= (:c1 system)
                :the-c1))
