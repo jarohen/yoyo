@@ -110,9 +110,9 @@
                      (or (#{:yoyo.system/system-failed :yoyo.system/no-such-dependency} dep)
 
                          (a/<! (#?(:clj a/thread, :cljs go)
-                                  (p/try-satisfy dependent
-                                                 (-> dep
-                                                     (with-meta {:env env}))))))))))
+                                (p/try-satisfy dependent
+                                               (-> dep
+                                                   (with-meta {:env env}))))))))))
 
         dependent))))
 
@@ -127,16 +127,17 @@
   (def foo-system
     (ys/make-system [(-> (fn []
                            (c/mlet [env (ys/ask-env)]
-                             (ys/->dep (yc/->component (future-call (fn []
-                                                                      (prn "out:" (a/<!!
-                                                                                   (do
-                                                                                     (println "here!")
-                                                                                     (-> (c/mlet [c1 (ys/ask :c1)]
-                                                                                           (println "got it!" c1)
-                                                                                           (Thread/sleep 2000)
-                                                                                           (ys/->dep {:my-c1 c1}))
+                             (ys/->dep
+                              (yc/->component (future-call (fn []
+                                                             (prn "out:"
+                                                                  (a/<!! (do
+                                                                           (println "here!")
+                                                                           (-> (c/mlet [c1 (ys/ask :c1)]
+                                                                                 (println "got it!" c1)
+                                                                                 (Thread/sleep 2000)
+                                                                                 (ys/->dep {:my-c1 c1}))
 
-                                                                                         (run-async env)))))))))))
+                                                                               (run-async env)))))))))))
                          (ys/named :dep))
 
                      (-> (fn []

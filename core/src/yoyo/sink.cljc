@@ -5,7 +5,7 @@
 
 (extend-protocol SystemSink
   #?(:clj clojure.lang.Atom
-      :cljs cljs.core.Atom)
+     :cljs cljs.core.Atom)
   (set-system! [!atom running-system]
     (reset! !atom running-system)))
 
