@@ -3,7 +3,8 @@
             [clojure.tools.logging :as log]
             [nrepl.embed :as nrepl]
             [yoyo.aleph :as aleph]
-            [yoyo.system :as ys]))
+            [yoyo.system :as ys]
+            [yoyo]))
 
 (defn make-web-server []
   (ys/->dep
