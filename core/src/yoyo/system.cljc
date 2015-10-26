@@ -52,12 +52,6 @@
                            :f (fn [system]
                                 (->dep (get-in system (cons p path))))}))
 
-(defn ask-env
-  " :: Dependent Env"
-  []
-
-  (p/env-dependent))
-
 (defn- try-satisfy-dependencies [m-system]
   (reduce (fn [m-system {dependency-id :id, :as dependency}]
             (let [dependent (p/get-dependent dependency)]
@@ -122,38 +116,12 @@
 
   (r/run dependent system))
 
-(defn run!!
-  ":: Dependent a -> Env -> a"
-  [dependent env]
+(defn <!! [dependent]
+  (r/<!! dependent))
 
-  (r/run!! dependent env))
+(defn <ch [dependent]
+  (r/<ch dependent))
 
-(defn wrap-run!! [f env]
-  ":: ((...) -> Dependent a) -> Env -> ((...) -> a)"
-  (r/wrap-run!! f env))
-
-(defn m-wrap-run!!
-  ":: ((...) -> Dependent a) -> Dependent ((...) -> a)"
-  [f]
-  (c/bind (ask-env)
-          (fn [env]
-            (wrap-run!! f env))))
-
-(defn run-async
-  ":: Dependent a -> Env -> Channel a"
-  [dependent env]
-
-  (r/run-async dependent env))
-
-(defn wrap-run-async
-  ":: ((...) -> Dependent a) -> Env -> ((...) -> Channel a)"
-  [f env]
-
-  (r/wrap-run-async f env))
-
-(defn m-wrap-run-async
-  ":: ((...) -> Dependent a) -> Dependent ((...) -> Channel a)"
-  [f]
-  (c/bind (ask-env)
-          (fn [env]
-            (wrap-run-async f env))))
+#?(:clj
+   (defmacro mgo [& body]
+     (r/mgo &env `(do ~@body))))
