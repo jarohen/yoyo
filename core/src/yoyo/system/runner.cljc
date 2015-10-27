@@ -11,10 +11,6 @@
 
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
-(defn dependent? [dependent]
-  (and dependent
-       (satisfies? p/Dependent dependent)))
-
 (defn run [dependent system]
   (let [system (-> system
                    (with-meta {:env (->> (for [[k v] system]
@@ -22,7 +18,7 @@
                                          (into {}))}))]
 
     (loop [dependent dependent]
-      (if (dependent? dependent)
+      (if (p/dependent? dependent)
         (let [satisfied-dependent (p/try-satisfy dependent system)]
           (if (= satisfied-dependent dependent)
             (throw (ex-info "Can't satisfy dependent..."
@@ -39,7 +35,7 @@
     (comp #(run!! % env) dependent)
 
     (loop [dependent dependent]
-      (if (dependent? dependent)
+      (if (p/dependent? dependent)
         (let [{:keys [dep-key]} dependent
               throw-system-failed (fn []
                                     (throw (ex-info "The system failed to start"
@@ -89,7 +85,7 @@
 
     (go-loop [dependent-ch (go dependent)]
       (let [dependent (a/<! dependent-ch)]
-        (if (dependent? dependent)
+        (if (p/dependent? dependent)
           (let [{:keys [dep-key]} dependent]
             (recur (go
                      (let [ch (if dep-key
