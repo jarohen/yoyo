@@ -122,3 +122,10 @@
 
         (let [returned-e (a/<!! @@!!val)]
           (is (= ::ys/system-failed returned-e)))))))
+
+(deftest runs-mgo
+  (is (= 5 (-> (ys/mgo
+                (ys/->dep
+                 (inc (ys/<!! (ys/ask :x)))))
+
+               (run {:x 4})))))
