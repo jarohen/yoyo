@@ -128,15 +128,19 @@
 (defn ask-env []
   (p/env-dependent))
 
+(defn var->sym [v]
+  (let [{sym-name :name, sym-ns :ns} (meta v)]
+    (symbol (str sym-ns) (str sym-name))))
+
 (defn mgo [env form]
-  (let [ys-env-sym (gensym)]
+  (let [ys-env-sym (gensym "ys-env")]
     `(c/bind (ask-env)
              (fn [~ys-env-sym]
                ~(postwalk (fn [o]
                             (if (symbol? o)
-                              (condp = (resolve env o)
-                                #'yoyo.system/<!! `#(run!! % ~ys-env-sym)
-                                #'yoyo.system/<ch `#(run-async % ~ys-env-sym)
+                              (condp = (var->sym (resolve env o))
+                                'yoyo.system/<!! `#(run!! % ~ys-env-sym)
+                                'yoyo.system/<ch `#(run-async % ~ys-env-sym)
                                 o)
                               o))
 
