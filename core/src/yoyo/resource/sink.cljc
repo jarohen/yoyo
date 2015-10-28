@@ -1,4 +1,4 @@
-(ns yoyo.sink)
+(ns yoyo.resource.sink)
 
 (defprotocol SystemSink
   (set-system! [_ running-system]))

@@ -1,14 +1,35 @@
 (ns ^{:clojure.tools.namespace.repl/load false
       :clojure.tools.namespace.repl/unload false}
   yoyo
-  (:require [yoyo.core :as yc]
-            [yoyo.protocols :as yp]
-            [yoyo.reresolve :as yr]
-            #?@(:clj
-                [[clojure.tools.namespace.repl :as ctn]])))
+  (:require [yoyo.resource.protocols :as yrp]
+
+            #?(:clj
+               [clojure.tools.namespace.repl :as ctn])))
 
 (defonce ^:private !system-fn (atom nil))
 (defonce ^:private !system (atom nil))
+
+(defn- with-reresolve [v]
+  (cond
+    (var? v) #?(:clj
+                (with-reresolve (symbol (str (ns-name (:ns (meta v))))
+                                        (str (:name (meta v)))))
+
+                :cljs v)
+
+    #?@(:clj [(symbol? v) (let [v-ns (symbol (namespace v))
+                                v-name (symbol (name v))]
+                            (fn [& args]
+                              (require v-ns)
+
+                              (apply (or (ns-resolve (find-ns v-ns)
+                                                     v-name)
+                                         (println "uh oh!")
+                                         (throw (ex-info "Can't resolve system-fn!"
+                                                         {:sym v})))
+                                     args)))])
+
+    :else v))
 
 (defn set-system-fn!
   "Sets the Yo-yo system fn, to be used with `start!`, `stop!` and
@@ -33,7 +54,7 @@
 
   (if-let [system-fn @!system-fn]
     (let [new-system (system-fn)]
-      (when-not (satisfies? yp/IComponent new-system)
+      (when-not (satisfies? yrp/IResource new-system)
         (throw (ex-info "Expecting a system, got" {:type (type new-system)})))
 
       (boolean (reset! !system new-system)))
@@ -52,7 +73,7 @@
                         (if (compare-and-set! !system system nil)
                           system
                           (recur))))]
-    (yp/stop! system)))
+    (yrp/-close! system)))
 
 (defn reload!
   "Reloads a Yo-yo system by stopping and restarting it."

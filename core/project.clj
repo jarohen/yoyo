@@ -1,4 +1,4 @@
-(defproject jarohen/yoyo "0.0.6-beta4"
+(defproject jarohen/yoyo "0.0.7-SNAPSHOT"
   :description ""
   :url "https://github.com/james-henderson/yoyo"
   :license {:name "Eclipse Public License"
@@ -8,7 +8,7 @@
 
                  [org.clojure/tools.namespace "0.2.11"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [funcool/cats "0.6.1"]
+                 [funcool/cats "1.0.0"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]]
 
   :exclusions [org.clojure/clojure])

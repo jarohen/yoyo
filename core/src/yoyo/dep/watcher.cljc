@@ -1,4 +1,4 @@
-(ns yoyo.system.watcher)
+(ns yoyo.dep.watcher)
 
 (defprotocol IWatcher
   (await! [_ f])
@@ -12,7 +12,7 @@
       (let [{:keys [fs v] :as state} @!state]
         (if (= v ::nil)
           (if (compare-and-set! !state state (update state :fs conj f))
-            ::waiting
+            :waiting
             (recur))
 
           v))))
@@ -29,7 +29,7 @@
     new-v)
 
   (close! [watcher]
-    (satisfy! watcher :yoyo.system/system-failed)))
+    (satisfy! watcher :system-failed)))
 
 (defn watcher
   ([]
