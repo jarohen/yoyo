@@ -1,8 +1,10 @@
 (ns yoyo.resource
+  (:refer-clojure :exclude [with-open])
   (:require [yoyo.resource.protocols :as p]
             [yoyo.resource.sink :as sink]
             [cats.core :as c]
-            [cats.protocols :as cp])
+            [cats.protocols :as cp]
+            [clojure.java.io :as io])
   (:import [yoyo.resource.protocols Resource]))
 
 (defn ->resource
@@ -65,6 +67,9 @@
     (f (:v resource))
     (finally
       (p/-close! resource))))
+
+(defn with-open [^java.io.Closeable o]
+  (->resource o (fn [] (.close o))))
 
 (defn with-system-put-to
   "Given a running system, stores the value of the system in the given
