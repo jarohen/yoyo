@@ -1,6 +1,6 @@
 (ns yoyo.system.runner
-  (:require [yoyo.system.watcher :as w]
-            [yoyo.system.protocols :as p]
+  (:require [yoyo.system.protocols :as p]
+            [yoyo.system.watcher :as w]
             [cats.core :as c]
             [clojure.walk :as cw]
 
@@ -128,24 +128,31 @@
 (defn ask-env []
   (p/env-dependent))
 
-(defn var->sym [v]
-  (let [{sym-name :name, sym-ns :ns} (meta v)]
-    (symbol (str sym-ns) (str sym-name))))
-
 #?(:clj
-   (defn mgo [env form]
-     (let [ys-env-sym (gensym "ys-env")]
-       `(c/bind (ask-env)
-                (fn [~ys-env-sym]
-                  ~(cw/postwalk (fn [o]
-                                  (if (symbol? o)
-                                    (condp = (var->sym (resolve env o))
-                                      'yoyo.system/<!! `#(run!! % ~ys-env-sym)
-                                      'yoyo.system/<ch `#(run-async % ~ys-env-sym)
-                                      o)
-                                    o))
+   (do
+     (defn- var->sym [env sym]
+       (if (boolean (some-> (resolve 'cljs.env/*compiler*)
+                            deref))
 
-                                (cw/macroexpand-all form)))))))
+         (-> ((resolve 'cljs.analyzer/resolve-var) env sym)
+             :name)
+
+         (let [{sym-name :name, sym-ns :ns} (meta (resolve env sym))]
+           (symbol (str sym-ns) (str sym-name)))))
+
+     (defn mgo [env form]
+       (let [ys-env-sym (gensym "ys-env")]
+         `(c/bind (ask-env)
+                  (fn [~ys-env-sym]
+                    ~(cw/postwalk (fn [o]
+                                    (if (symbol? o)
+                                      (condp = (var->sym env o)
+                                        'yoyo.system/<!! `#(run!! % ~ys-env-sym)
+                                        'yoyo.system/<ch `#(run-async % ~ys-env-sym)
+                                        o)
+                                      o))
+
+                                  (cw/macroexpand-all form))))))))
 
 (comment
   (require '[yoyo.system :as ys]
