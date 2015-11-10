@@ -24,6 +24,10 @@
   (dbind [_ f])
   (try-satisfy [_ system]))
 
+(defn dependent? [dependent]
+  (and dependent
+       (satisfies? Dependent dependent)))
+
 (defrecord ResolvedDependent [v]
   cp/Context
   (get-context [_] dependent-monad)

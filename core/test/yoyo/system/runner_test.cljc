@@ -19,7 +19,7 @@
 
 (defn make-dep [{:keys [!!val wrap-fn]}]
   (-> (fn []
-        (c/mlet [env (ys/ask-env)]
+        (c/mlet [env (ask-env)]
           (let [!val (future-call (fn []
                                     (-> (c/mlet [c1 (ys/ask :c1)]
                                           (ys/->dep {:my-c1 c1}))
@@ -33,7 +33,7 @@
 
 (defn make-c1 [{:keys [to-throw]}]
   (-> (fn []
-        (c/mlet [env (ys/ask-env)]
+        (c/mlet [env (ask-env)]
           (ys/->dep (yc/->component (do (Thread/sleep 500)
                                         (when to-throw
                                           (throw to-throw))
@@ -122,3 +122,10 @@
 
         (let [returned-e (a/<!! @@!!val)]
           (is (= ::ys/system-failed returned-e)))))))
+
+(deftest runs-mgo
+  (is (= 5 (-> (ys/mgo
+                (ys/->dep
+                 (inc (ys/<!! (ys/ask :x)))))
+
+               (run {:x 4})))))

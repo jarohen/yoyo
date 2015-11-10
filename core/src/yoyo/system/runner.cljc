@@ -1,6 +1,8 @@
 (ns yoyo.system.runner
   (:require [yoyo.system.watcher :as w]
             [yoyo.system.protocols :as p]
+            [cats.core :as c]
+            [clojure.walk :refer [postwalk]]
 
             #?(:clj
                [clojure.core.async :as a :refer [go go-loop]]
@@ -9,10 +11,6 @@
 
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go go-loop]])))
 
-(defn dependent? [dependent]
-  (and dependent
-       (satisfies? p/Dependent dependent)))
-
 (defn run [dependent system]
   (let [system (-> system
                    (with-meta {:env (->> (for [[k v] system]
@@ -20,7 +18,7 @@
                                          (into {}))}))]
 
     (loop [dependent dependent]
-      (if (dependent? dependent)
+      (if (p/dependent? dependent)
         (let [satisfied-dependent (p/try-satisfy dependent system)]
           (if (= satisfied-dependent dependent)
             (throw (ex-info "Can't satisfy dependent..."
@@ -33,91 +31,121 @@
         dependent))))
 
 (defn run!! [dependent env]
-  (loop [dependent dependent]
-    (if (dependent? dependent)
-      (let [{:keys [dep-key]} dependent
-            throw-system-failed (fn []
-                                  (throw (ex-info "The system failed to start"
-                                                  {:yoyo.system/error :system-failed
-                                                   :dep-key dep-key})))]
-        (recur (p/try-satisfy dependent
-                              (-> (if dep-key
-                                    (if-let [watcher (get env dep-key)]
-                                      #?(:clj
-                                         (let [!dep-promise (promise)
-                                               dep (w/await! watcher (fn [dep]
-                                                                       (deliver !dep-promise dep)))]
+  (if (fn? dependent)
+    (comp #(run!! % env) dependent)
 
-                                           {dep-key (case dep
-                                                      ::w/waiting (let [dep @!dep-promise]
-                                                                    (case dep
-                                                                      :yoyo.system/system-failed (throw-system-failed)
+    (loop [dependent dependent]
+      (if (p/dependent? dependent)
+        (let [{:keys [dep-key]} dependent
+              throw-system-failed (fn []
+                                    (throw (ex-info "The system failed to start"
+                                                    {:yoyo.system/error :system-failed
+                                                     :dep-key dep-key})))]
+          (recur (p/try-satisfy dependent
+                                (-> (if dep-key
+                                      (if-let [watcher (get env dep-key)]
+                                        #?(:clj
+                                           (let [!dep-promise (promise)
+                                                 dep (w/await! watcher (fn [dep]
+                                                                         (deliver !dep-promise dep)))]
 
-                                                                      dep))
+                                             {dep-key (case dep
+                                                        ::w/waiting (let [dep @!dep-promise]
+                                                                      (case dep
+                                                                        :yoyo.system/system-failed (throw-system-failed)
 
-                                                      :yoyo.system/system-failed (throw-system-failed)
+                                                                        dep))
 
-                                                      dep)})
+                                                        :yoyo.system/system-failed (throw-system-failed)
 
-                                         ;; In CLJS? No blocking for you...
-                                         :cljs
-                                         (let [dep (w/await! watcher (fn [dep]))]
-                                           (case dep
-                                             ::w/waiting (throw (ex-info "Dependency not started!"
-                                                                         {:dep-key dep-key}))
+                                                        dep)})
 
-                                             :yoyo.system/system-failed (throw-system-failed)
+                                           ;; In CLJS? No blocking for you...
+                                           :cljs
+                                           (let [dep (w/await! watcher (fn [dep]))]
+                                             (case dep
+                                               ::w/waiting (throw (ex-info "Dependency not started!"
+                                                                           {:dep-key dep-key}))
 
-                                             dep)))
+                                               :yoyo.system/system-failed (throw-system-failed)
 
-                                      (throw (ex-info "Missing dependency"
-                                                      {:yoyo.system/error :no-such-dependency
-                                                       :dep-key dep-key})))
-                                    {})
-                                  (with-meta {:env env})))))
+                                               dep)))
 
-      dependent)))
-
-(defn wrap-run!! [f env]
-  (comp #(run!! % env) f))
-
-(defn run-async [dependent env]
-  (go-loop [dependent-ch (go dependent)]
-    (let [dependent (a/<! dependent-ch)]
-      (if (dependent? dependent)
-        (let [{:keys [dep-key]} dependent]
-          (recur (go
-                   (let [ch (if dep-key
-                              (let [ch (a/chan)
-                                    dep (if-let [watcher (get env dep-key)]
-                                          (w/await! watcher (fn [dep]
-                                                              (a/put! ch (or (#{:yoyo.system/system-failed} dep)
-                                                                             {dep-key dep}))))
-
-                                          :yoyo.system/no-such-dependency)]
-
-                                (condp contains? dep
-                                  #{:yoyo.system/system-failed :yoyo.system/no-such-dependency} (go dep)
-
-                                  #{::w/waiting} ch
-
-                                  (go {dep-key dep})))
-
-                              (go {}))
-
-                         dep (a/<! ch)]
-
-                     (or (#{:yoyo.system/system-failed :yoyo.system/no-such-dependency} dep)
-
-                         (a/<! (#?(:clj a/thread, :cljs go)
-                                (p/try-satisfy dependent
-                                               (-> dep
-                                                   (with-meta {:env env}))))))))))
+                                        (throw (ex-info "Missing dependency"
+                                                        {:yoyo.system/error :no-such-dependency
+                                                         :dep-key dep-key})))
+                                      {})
+                                    (with-meta {:env env})))))
 
         dependent))))
 
-(defn wrap-run-async [f env]
-  (comp #(run-async % env) f))
+(defn run-async [dependent env]
+  (if (fn? dependent)
+    (comp #(run-async % env) dependent)
+
+    (go-loop [dependent-ch (go dependent)]
+      (let [dependent (a/<! dependent-ch)]
+        (if (p/dependent? dependent)
+          (let [{:keys [dep-key]} dependent]
+            (recur (go
+                     (let [ch (if dep-key
+                                (let [ch (a/chan)
+                                      dep (if-let [watcher (get env dep-key)]
+                                            (w/await! watcher (fn [dep]
+                                                                (a/put! ch (or (#{:yoyo.system/system-failed} dep)
+                                                                               {dep-key dep}))))
+
+                                            :yoyo.system/no-such-dependency)]
+
+                                  (condp contains? dep
+                                    #{:yoyo.system/system-failed :yoyo.system/no-such-dependency} (go dep)
+
+                                    #{::w/waiting} ch
+
+                                    (go {dep-key dep})))
+
+                                (go {}))
+
+                           dep (a/<! ch)]
+
+                       (or (#{:yoyo.system/system-failed :yoyo.system/no-such-dependency} dep)
+
+                           (a/<! (#?(:clj a/thread, :cljs go)
+                                  (p/try-satisfy dependent
+                                                 (-> dep
+                                                     (with-meta {:env env}))))))))))
+
+          dependent)))))
+
+(defn <!! [dependent]
+  (throw (ex-info "<!! used outside of mgo!"
+                  {:dependent dependent})))
+
+(defn <ch [dependent]
+  (throw (ex-info "<ch used outside of mgo!"
+                  {:dependent dependent})))
+
+(defn ask-env []
+  (p/env-dependent))
+
+(defn var->sym [v]
+  (let [{sym-name :name, sym-ns :ns} (meta v)]
+    (symbol (str sym-ns) (str sym-name))))
+
+#?(:clj
+   (defn mgo [env form]
+     (let [ys-env-sym (gensym "ys-env")]
+       `(c/bind (ask-env)
+                (fn [~ys-env-sym]
+                  ~(postwalk (fn [o]
+                               (if (symbol? o)
+                                 (condp = (var->sym (resolve env o))
+                                   'yoyo.system/<!! `#(run!! % ~ys-env-sym)
+                                   'yoyo.system/<ch `#(run-async % ~ys-env-sym)
+                                   o)
+                                 o))
+
+                             form))))))
 
 (comment
   (require '[yoyo.system :as ys]
