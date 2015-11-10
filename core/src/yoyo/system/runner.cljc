@@ -138,7 +138,11 @@
        (let [macroexpand (if (cljs?)
                            (fn [form]
                              (->> form
-                                  (iterate #((resolve 'cljs.analyzer/macroexpand-1) env %))
+                                  (iterate (fn [form]
+                                             (with-bindings* (let [warnings-var (resolve 'cljs.analyzer/*cljs-warnings*)]
+                                                               {warnings-var (zipmap (keys @warnings-var) (repeat false))})
+                                               (fn []
+                                                 ((resolve 'cljs.analyzer/macroexpand-1) env form)))))
                                   (partition-all 2 1)
                                   (drop-while #(apply not= %))
                                   ffirst))
