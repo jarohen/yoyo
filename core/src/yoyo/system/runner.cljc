@@ -130,10 +130,29 @@
 
 #?(:clj
    (do
-     (defn- var->sym [env sym]
-       (if (boolean (some-> (resolve 'cljs.env/*compiler*)
-                            deref))
+     (defn- cljs? []
+       (boolean (some-> (resolve 'cljs.env/*compiler*)
+                        deref)))
 
+     (defn- macroexpand-all [env form]
+       (let [macroexpand (if (cljs?)
+                           (fn [form]
+                             (->> form
+                                  (iterate #((resolve 'cljs.analyzer/macroexpand-1) env %))
+                                  (partition-all 2 1)
+                                  (drop-while #(apply not= %))
+                                  ffirst))
+
+                           macroexpand)]
+
+         (cw/prewalk (fn [x]
+                       (if (seq? x)
+                         (macroexpand x)
+                         x))
+                     form)))
+
+     (defn- var->sym [env sym]
+       (if (cljs?)
          (-> ((resolve 'cljs.analyzer/resolve-var) env sym)
              :name)
 
@@ -152,7 +171,15 @@
                                         o)
                                       o))
 
-                                  (cw/macroexpand-all form))))))))
+                                  (macroexpand-all env form))))))))
+
+(comment
+  (macroexpand-all '(yoyo.system/mgo
+                     (yoyo.system/->dep
+                      (clojure.core.async/go
+                        (yoyo.system/<!! (yoyo.system/->dep 42))))
+                     ))
+  )
 
 (comment
   (require '[yoyo.system :as ys]
