@@ -2,7 +2,7 @@
   (:require [yoyo.system.watcher :as w]
             [yoyo.system.protocols :as p]
             [cats.core :as c]
-            [clojure.walk :refer [postwalk]]
+            [clojure.walk :as w]
 
             #?(:clj
                [clojure.core.async :as a :refer [go go-loop]]
@@ -137,7 +137,7 @@
      (let [ys-env-sym (gensym "ys-env")]
        `(c/bind (ask-env)
                 (fn [~ys-env-sym]
-                  ~(postwalk (fn [o]
+                  ~(w/postwalk (fn [o]
                                (if (symbol? o)
                                  (condp = (var->sym (resolve env o))
                                    'yoyo.system/<!! `#(run!! % ~ys-env-sym)
@@ -145,7 +145,7 @@
                                    o)
                                  o))
 
-                             form))))))
+                             (w/macroexpand-all form)))))))
 
 (comment
   (require '[yoyo.system :as ys]
