@@ -11,7 +11,7 @@ and ClojureScript)
 ** Dependency
 
 #+BEGIN_SRC clojure
-  [jarohen/yoyo "0.0.6-beta2"]
+  [jarohen/yoyo "0.0.6-beta5"]
 #+END_SRC
 
 There will likely be many breaking changes until 0.1.0!
@@ -452,7 +452,7 @@ We can also test the whole system, in the same way as before:
         )))
 #+END_SRC
 
-**** Getting dependencies asynchronously - the Yo-yo 'environment'
+**** Getting dependencies asynchronously - 'mgo'
 
 (This part of Yo-yo, in particular, is the part I'm not so convinced
 of - please let me know if you have ideas around this, whether it be
@@ -495,47 +495,45 @@ We'd rather not:
   the function - we'd like to keep the ~ys/ask~-s at the same level of
   abstraction as the values are used
 
-So, Yo-yo provides the means to ask for an 'environment' - which can
-satisfy dependencies from a different thread. In the main thread, we
-ask for the environment, using ~ys/ask-env~, which we then close
-over. Then, in other threads, we evaluate Dependents by passing them
-the environment. We can satisfy Dependents in this way either
-synchronously (CLJ only) or asynchronously (CLJ/CLJS).
+So, Yo-yo provides the means to ask for an 'environment' - which can satisfy
+dependencies from a different thread. In the main thread, we wrap the body in
+the ~ys/mgo~ macro, to capture the environment. Then, in other threads, we
+evaluate Dependents by calling either ~<!!~ (synchronous, throws an exception in
+CLJS if a Dependency is not satisfied) or ~<ch~ (asynchronous, returning a
+core.async channel). ~<!!~ and ~<ch~ can only be used within an ~mgo~ block,
+like core.async's ~<!~ and ~>!~ operators, because they rely on ~mgo~'s captured
+environment.
 
 #+BEGIN_SRC clojure
   ;; what we actually write:
 
   (defn open-web-server! []
-    (c/mlet [server-opts (ys/ask :config :web-server)
-             ys-env (ys/ask-env)]
-      (ys/->dep
-       (let [web-server (start-server! {:handler (-> (fn [req]
-                                                       (c/mlet [...]
-                                                         (ys/->dep
-                                                          {:status 200
-                                                           :body ...})))
-                                                     (ys/wrap-run!! ys-env))
+    (ys/mgo ;; wrap with `mgo`
+     (c/mlet [server-opts (ys/ask :config :web-server)]
+       (ys/->dep
+        (let [web-server (start-server! {:handler (fn [req]
+                                                    ;; Wrap Dependents with `<!!`
+                                                    ;; to evaluate them
+                                                    (ys/<!! (c/mlet [...]
+                                                              (ys/->dep
+                                                               {:status 200
+                                                                :body ...}))))
 
-                                        :server-opts server-opts})]
-         (yc/->component web-server
-                         (fn []
-                           (stop-server! web-server)))))))
+                                         :server-opts server-opts})]
+          (yc/->component web-server
+                          (fn []
+                            (stop-server! web-server))))))))
 #+END_SRC
 
-In this case, we wrap the handler function with ~ys/wrap-run!!~, which
-given an environment, turns a ~Request -> Dependent Response~ function
-into a ~Request -> Response~ function. As the ~!!~ in its name
-suggests, ~wrap-run!!~ will block waiting for a dependency if it is
-requested on another thread without having yet been started on the
-main system thread.
+In this case, we wrap the handler function with ~ys/<!!~, which turns a ~Request
+-> Dependent Response~ function into a ~Request -> Response~ function. As the
+~!!~ in its name suggests, ~<!!~ will block waiting for a dependency if it is
+requested on another thread without having yet been started on the main system
+thread.
 
-In ClojureScript, we don't have the luxury of blocking, so there are
-equivalent ~wrap-run-async~ (and similar) functions, which turn a
-Dependent into a core.async channel returning the satisfied value.
-
-There are many such functions in ~yoyo.system~, some blocking (CLJ
-only), some asynchronous (CLJ and CLJS), some taking functions, some
-taking Dependents - there's probably a function for most use cases!
+In ClojureScript, we don't have the luxury of blocking, so there is an
+equivalent ~<ch~ function, which turn a Dependent into a core.async channel
+returning the satisfied value.
 
 ** Templates
 
