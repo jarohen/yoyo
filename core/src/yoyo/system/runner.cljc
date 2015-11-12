@@ -31,7 +31,7 @@
         dependent))))
 
 (defn run!! [dependent env]
-  (if (fn? dependent)
+  (if (ifn? dependent)
     (comp #(run!! % env) dependent)
 
     (loop [dependent dependent]
@@ -80,7 +80,7 @@
         dependent))))
 
 (defn run-async [dependent env]
-  (if (fn? dependent)
+  (if (ifn? dependent)
     (comp #(run-async % env) dependent)
 
     (go-loop [dependent-ch (go dependent)]
