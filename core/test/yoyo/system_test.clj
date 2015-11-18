@@ -4,58 +4,49 @@
             [cats.core :as c]
             [clojure.test :refer :all]))
 
-(prefer-method clojure.pprint/simple-dispatch yoyo.protocols.IComponent clojure.lang.IPersistentMap)
-
 (defn make-c1 [!events]
-  (-> (fn []
-        (->dep (yc/->component (do
-                                 (swap! !events conj :started-c1)
-                                 :the-c1)
-                               (fn []
-                                 (swap! !events conj :stopped-c1)))))
-
-      (named :c1)))
+  (fn []
+    (->dep (yc/->component (do
+                             (swap! !events conj :started-c1)
+                             :the-c1)
+                           (fn []
+                             (swap! !events conj :stopped-c1))))))
 
 (defn make-c2 [!events]
-  (-> (fn []
-        (c/mlet [c1 (ask :c1)]
-          (->dep
-           (yc/->component
-            (do
-              (swap! !events conj {:event :started-c2
-                                   :c1 c1})
-              :the-c2)
+  (fn []
+    (c/mlet [c1 (ask :c1)]
+      (->dep
+       (yc/->component
+        (do
+          (swap! !events conj {:event :started-c2
+                               :c1 c1})
+          :the-c2)
 
-            (fn []
-              (swap! !events conj :stopped-c2))))))
-
-      (named :c2)))
+        (fn []
+          (swap! !events conj :stopped-c2)))))))
 
 (defn make-c3 [!events {:keys [to-throw]}]
-  (-> (fn []
-        (c/mlet [c1 (ask :c1)
-                 c2 (ask :c2)
-                 env (ask-env)]
-          (when to-throw
-            (throw to-throw))
+  (fn []
+    (c/mlet [c1 (ask :c1)
+             c2 (ask :c2)]
+      (when to-throw
+        (throw to-throw))
 
-          (->dep
-           (yc/->component
-            (do
-              (swap! !events conj {:event :started-c3
-                                   :c1 c1
-                                   :c2 c2})
-              :the-c3)))))
-
-      (named :c3)))
+      (->dep
+       (yc/->component
+        (do
+          (swap! !events conj {:event :started-c3
+                               :c1 c1
+                               :c2 c2})
+          :the-c3))))))
 
 (deftest make-system-test
   (let [!events (atom [])
 
         make-the-system (fn []
-                          (make-system #{(make-c1 !events)
-                                         (make-c2 !events)
-                                         (make-c3 !events {})}))]
+                          (make-system {:c1 (make-c1 !events)
+                                        :c2 (make-c2 !events)
+                                        :c3 (make-c3 !events {})}))]
 
     (yc/with-component (make-the-system)
       (fn [system]
@@ -80,9 +71,9 @@
         to-throw (ex-info "uh oh..." {})
 
         make-the-system (fn []
-                          (make-system #{(make-c1 !events)
-                                         (make-c2 !events)
-                                         (make-c3 !events {:to-throw to-throw})}))]
+                          (make-system {:c1 (make-c1 !events)
+                                        :c2 (make-c2 !events)
+                                        :c3 (make-c3 !events {:to-throw to-throw})}))]
 
     (try
       (yc/with-component (make-the-system)

@@ -13,19 +13,6 @@
 
   (p/->ResolvedDependent v))
 
-(def nothing
-  (->dep nil))
-
-(defn named
-  " :: (() -> Dependent a) -> Dependency a
-
-  Given a function returning a Dependent, returns a named Dependency
-  for use in `make-system`"
-  [dependent-fn id]
-
-  (p/map->InitialDependency {:id id
-                             :dependent-fn dependent-fn}))
-
 (defn ask
   " :: path -> Dependent a
 
@@ -50,27 +37,35 @@
                            :f (fn [system]
                                 (->dep (get-in system (cons p path))))}))
 
+(defn get-dependent [dep]
+  (if (and (fn? dep)
+           (::initial-fn? (meta dep)))
+    (dep)
+    dep))
+
 (defn- try-satisfy-dependencies [m-system]
-  (reduce (fn [m-system {dependency-id :id, :as dependency}]
-            (let [dependent (p/get-dependent dependency)]
-              (c/bind m-system
+  (-> m-system
+      (c/bind (fn [{:keys [dependencies] :as system}]
+                (reduce (fn [m-system [dep-id dep]]
+                          (let [dependent (get-dependent dep)]
+                            (c/bind m-system
 
-                      (fn [{:keys [system dependencies] :as acc}]
-                        (let [m-new-dependent (or (when (satisfies? p/Dependent dependent)
-                                                    (p/try-satisfy dependent system))
-                                                  dependent)]
+                                    (fn [{:keys [system dependencies] :as acc}]
+                                      (let [m-new-dependent (or (when (satisfies? p/Dependent dependent)
+                                                                  (p/try-satisfy dependent system))
+                                                                dependent)]
 
-                          (if (satisfies? p/Dependent m-new-dependent)
-                            (yc/->component (update acc :dependencies conj (p/->Dependency dependency-id m-new-dependent)))
+                                        (if (satisfies? p/Dependent m-new-dependent)
+                                          (yc/->component (update acc :dependencies assoc dep-id m-new-dependent))
 
-                            (->> m-new-dependent
-                                 (c/fmap (fn [new-dependent]
-                                           (w/satisfy! (get-in (meta system) [:env dependency-id]) new-dependent)
-                                           (assoc-in acc [:system dependency-id] new-dependent))))))))))
+                                          (->> m-new-dependent
+                                               (c/fmap (fn [new-dependent]
+                                                         (w/satisfy! (get-in (meta system) [:env dep-id]) new-dependent)
+                                                         (assoc-in acc [:system dep-id] new-dependent))))))))))
 
-          (assoc-in m-system [:v :dependencies] [])
+                        (yc/->component (assoc system :dependencies {}))
 
-          (:dependencies @m-system)))
+                        dependencies)))))
 
 (defn- cycle-error [m-system]
   (let [{:keys [dependencies system]} @m-system]
@@ -81,14 +76,16 @@
                                  (into {}))})))
 
 (defn make-system
-  ":: #{Dependency} -> System"
+  ":: {Key -> (() -> Dependent)} -> System"
   [dependencies]
-
-  (loop [m-system (let [env (zipmap (map :id dependencies)
+  (loop [m-system (let [env (zipmap (keys dependencies)
                                     (repeatedly w/watcher))]
                     (yc/->component (-> {:system (-> {}
                                                      (with-meta {:env env}))
-                                         :dependencies dependencies})
+                                         :dependencies (->> (for [[dep-id dep-fn] dependencies]
+                                                              [dep-id (-> dep-fn
+                                                                          (vary-meta assoc ::initial-fn? true))])
+                                                            (into {}))})
 
                                     (fn []
                                       (doseq [watcher (vals env)]

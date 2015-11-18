@@ -7,19 +7,6 @@
 
 (declare dependent-monad)
 
-(defprotocol IDependency
-  (get-dependent [_]))
-
-(defrecord InitialDependency [id dependent-fn]
-  IDependency
-  (get-dependent [_]
-    (dependent-fn)))
-
-(defrecord Dependency [id dependent]
-  IDependency
-  (get-dependent [_]
-    dependent))
-
 (defprotocol Dependent
   (dbind [_ f])
   (try-satisfy [_ system]))
