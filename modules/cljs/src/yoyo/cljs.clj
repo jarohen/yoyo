@@ -13,7 +13,7 @@
   (path-for-module [_ module]))
 
 (try
-  (require '[cljs.closure :as cljs]
+  (require '[cljs.build.api :as cljs]
            '[cljs.env :as cljs-env])
 
   (catch Exception e))
@@ -50,16 +50,13 @@
   (assert-cljs
    (assert (not-empty source-paths) "Please provide some source-paths!")
 
-   (let [start-time (System/nanoTime)
-         cljs-compilable (reify cljs/Compilable
-                           (-compile [_ opts]
-                             (mapcat #(cljs/-compile % opts) source-paths)))]
+   (let [start-time (System/nanoTime)]
 
      (log/infof "Compiling CLJS, from %s to '%s'..." source-paths target-path)
 
      (try
        (log/with-logs ['cljs.closure :debug :warn]
-         (cljs/build cljs-compilable cljs-opts cljs-compiler-env))
+         (cljs/build (apply cljs/inputs source-paths) cljs-opts cljs-compiler-env))
 
        (log/infof "Compiled CLJS, from %s to '%s', in %.2fs."
                   source-paths
