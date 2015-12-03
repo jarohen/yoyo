@@ -1,6 +1,17 @@
 #+ATTR_HTML: title="Join the chat at https://gitter.im/james-henderson/yoyo"
 [[https://gitter.im/james-henderson/yoyo?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge][file:https://badges.gitter.im/Join%20Chat.svg]]
 
+#+BEGIN_QUOTE
+I'm in the process of abandoning Yo-yo - while it was a good experiment, it
+seems in practice that this isn't an easy way to write readable code, and that
+refactoring Yo-yo based code is more difficult than 'normal' Clojure.
+
+Thanks for checking it out, and for your help and feedback in implementing it!
+
+James
+#+END_QUOTE
+
+
 Yo-yo is a lightweight library for composing 'Components' in a
 functional style, in Clojure and ClojureScript, using Clojure's '[[https://github.com/funcool/cats][Cats]]'
 monad library.
